@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id        String @id @default(uuid())
+  name      String
+  email     String @unique
+  password  String
+  image     String?
+  role      RoleList @default(USER)
+  isVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  notes Notes[] @relation("Owner")
+  editableNotes Notes[] @relation("Editor")
+}
+
+model Notes {
+  id        String @id @default(uuid())
+  userId    String
+  title     String?
+  body      String?
+  isPinned  Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  user Users @relation("Owner",fields: [userId], references: [id], onDelete: Cascade)
+  editors Users[] @relation("Editor")
+  tags Tags[]
+}
+
+model Tags{
+  id        String @id @default(uuid())
+  tag       String @unique
+  createdAt DateTime @default(now())
+
+  notes Notes[]
+}
+
+model Otps {
+  id String @id @default(uuid())
+  email String
+  otp String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+enum RoleList{
+  ADMIN
+  USER
+}
