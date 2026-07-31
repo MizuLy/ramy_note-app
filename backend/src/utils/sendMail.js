@@ -32,7 +32,7 @@ const sendOtp = async (email, otp) => {
       <table align="center" width="100%" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5decf;">
         <tr>
           <td style="background-color: #1a1a1a; padding: 28px 32px;">
-            <p style="margin: 0; color: #d4af37; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;">Notion Taobao</p>
+            <p style="margin: 0; color: #d4af37; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;">RAM Shortage</p>
           </td>
         </tr>
         <tr>
@@ -52,7 +52,7 @@ const sendOtp = async (email, otp) => {
         <tr>
           <td style="padding: 20px 32px; background-color: #f9f7f2; border-top: 1px solid #e5decf;">
             <p style="margin: 0; font-size: 12px; color: #9a9a9a; text-align: center;">
-              &copy; ${new Date().getFullYear()} Notion Taobao. All rights reserved.
+              &copy; ${new Date().getFullYear()} RAM Shortage. All rights reserved.
             </p>
           </td>
         </tr>
@@ -71,7 +71,7 @@ const sendSuccess = async (email) => {
       <table align="center" width="100%" style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e5decf;">
         <tr>
           <td style="background-color: #1a1a1a; padding: 28px 32px;">
-            <p style="margin: 0; color: #d4af37; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;">Notion Taobao</p>
+            <p style="margin: 0; color: #d4af37; font-size: 13px; letter-spacing: 3px; text-transform: uppercase;">RAM Shortage</p>
           </td>
         </tr>
         <tr>
@@ -88,7 +88,7 @@ const sendSuccess = async (email) => {
         <tr>
           <td style="padding: 20px 32px; background-color: #f9f7f2; border-top: 1px solid #e5decf;">
             <p style="margin: 0; font-size: 12px; color: #9a9a9a; text-align: center;">
-              &copy; ${new Date().getFullYear()} Notion Taobao. All rights reserved.
+              &copy; ${new Date().getFullYear()} RAM Shortage. All rights reserved.
             </p>
           </td>
         </tr>
