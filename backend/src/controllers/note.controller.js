@@ -39,15 +39,35 @@ const createNote = async (req, res) => {
 
 const getNotes = async (req, res) => {
   try {
+    const { tag, pinned, search, page = 1, limit = 10 } = req.query;
+
+    const where = {
+      AND: [
+        {
+          OR: [
+            { userId: req.user.id },
+            { editors: { some: { id: req.user.id } } },
+          ],
+        },
+        tag ? { tags: { some: { tag } } } : {},
+        pinned !== undefined ? { isPinned: pinned === "true" } : {},
+        search
+          ? {
+              OR: [
+                { title: { contains: search, mode: "insensitive" } },
+                { body: { contains: search, mode: "insensitive" } },
+              ],
+            }
+          : {},
+      ],
+    };
+
     const result = await prisma.notes.findMany({
-      where: {
-        OR: [
-          { userId: req.user.id }, // condition 1: they own it
-          { editors: { some: { id: req.user.id } } }, // condition 2: they're an editor
-        ],
-      },
+      where,
       include: { tags: true },
-      orderBy: { isPinned: "desc" }, // false = 0, true = 1 so desc takes from bottom first
+      orderBy: { isPinned: "desc" },
+      skip: (page - 1) * Number(limit),
+      take: Number(limit),
     });
 
     res.status(200).json({ status: "success", result });
@@ -55,6 +75,25 @@ const getNotes = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+// const getNotes = async (req, res) => {
+//   try {
+//     const result = await prisma.notes.findMany({
+//       where: {
+//         OR: [
+//           { userId: req.user.id }, // condition 1: they own it
+//           { editors: { some: { id: req.user.id } } }, // condition 2: they're an editor
+//         ],
+//       },
+//       include: { tags: true },
+//       orderBy: { isPinned: "desc" }, // false = 0, true = 1 so desc takes from bottom first
+//     });
+
+//     res.status(200).json({ status: "success", result });
+//   } catch (err) {
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
 
 const updateNote = async (req, res) => {
   try {
@@ -155,4 +194,10 @@ const removeNote = async (req, res) => {
   }
 };
 
-module.exports = { createNote, getNotes, updateNote, togglePin, removeNote };
+module.exports = {
+  createNote,
+  getNotes,
+  updateNote,
+  togglePin,
+  removeNote,
+};
