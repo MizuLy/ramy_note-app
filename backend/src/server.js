@@ -1,6 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
 const dashboardRoute = require("./routes/admin.route");
 const authRouter = require("./routes/auth.route");
@@ -13,6 +14,7 @@ const { generalLimiter } = require("./middlewares/rateLimiter");
 const app = express();
 const PORT = process.env.PORT || 6969;
 
+app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(cookieParser());
