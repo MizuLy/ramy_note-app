@@ -8,14 +8,22 @@ const jwt = require("jsonwebtoken");
 const { sendOtp } = require("../utils/sendMail");
 
 // Refresh controller
-const refresh = (req, res) => {
+const refresh = async (req, res) => {
   const token = req.cookies.refreshToken;
   if (!token) return res.status(401).json({ error: "No refresh token" });
 
   try {
     const decoded = jwt.verify(token, process.env.REFRESH_SECRET);
-    const newAccessToken = generateAccessToken(decoded.id);
-    res.status(200).json({ accessToken: newAccessToken });
+
+    const user = await prisma.users.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    if (!user) return res.status(401).json({ error: "User no longer exists" });
+
+    const newAccessToken = generateAccessToken(user.id);
+    res.status(200).json({ accessToken: newAccessToken, user });
   } catch (err) {
     res.status(403).json({ error: "Invalid refresh token" });
   }
@@ -101,6 +109,7 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
       accessToken,
     });
@@ -111,9 +120,10 @@ const login = async (req, res) => {
 
 // Logout
 const logout = async (req, res) => {
-  res.cookie("jwt", "", {
+  res.cookie("refreshToken", {
     httpOnly: true,
-    expires: new Date(0),
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
   });
   res
     .status(200)
