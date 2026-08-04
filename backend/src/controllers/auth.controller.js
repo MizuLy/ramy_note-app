@@ -194,6 +194,19 @@ const changePassword = async (req, res) => {
   }
 };
 
+const getUser = async (req, res) => {
+  try {
+    const user = await prisma.users.findUnique({
+      where: { id: req.user.id },
+      select: { name: true },
+    });
+
+    res.status(200).json({ status: "success", user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   refresh,
   register,
@@ -201,4 +214,5 @@ module.exports = {
   logout,
   changeEmail,
   changePassword,
+  getUser,
 };
