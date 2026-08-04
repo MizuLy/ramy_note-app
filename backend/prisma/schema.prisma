@@ -24,11 +24,13 @@ model Users {
 
   notes Notes[] @relation("Owner")
   editableNotes Notes[] @relation("Editor")
+  folders Folders[]
 }
 
 model Notes {
   id        String @id @default(uuid())
   userId    String
+  folderId  String?
   title     String?
   body      String?
   isPinned  Boolean @default(false)
@@ -37,6 +39,7 @@ model Notes {
   user Users @relation("Owner",fields: [userId], references: [id], onDelete: Cascade)
   editors Users[] @relation("Editor")
   tags Tags[]
+  folder Folders? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 }
 
 model Tags{
@@ -45,6 +48,16 @@ model Tags{
   createdAt DateTime @default(now())
 
   notes Notes[]
+}
+
+model Folders{
+  id        String @id @default(uuid())
+  name      String
+  userId    String
+  createdAt DateTime @default(now())
+  
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note Notes[]
 }
 
 model Otps {
