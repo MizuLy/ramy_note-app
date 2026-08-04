@@ -6,6 +6,8 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRoute from "./components/AdminRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Note from "./pages/dashboard/Note";
 
 export default function App() {
   return (
@@ -14,8 +16,15 @@ export default function App() {
         <Route path="/login" element={<Login />} />
       </Route>
 
-      <Route element={<DashboardLayout />}>
+      <Route
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/" element={<Dashboard />} />
+        <Route path="/notes" element={<Note />} />
       </Route>
 
       <Route

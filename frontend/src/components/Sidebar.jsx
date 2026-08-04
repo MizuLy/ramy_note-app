@@ -1,12 +1,18 @@
 import { SlOptions } from "react-icons/sl";
 import { IoSearch } from "react-icons/io5";
+import { Link } from "react-router-dom";
+import Logout from "../pages/auth/Logout";
+import { currentUser } from "../api/axios";
+import { useAuth } from "../context/AuthProvider";
 
 export default function Sidebar() {
+  const { user } = useAuth();
   return (
     <nav className="bg-zinc-800 w-[260px] h-screen text-white flex flex-col">
       {/* Sidebar Header */}
       <div className="border-b border-zinc-700 px-4 py-4">
-        <h1 className="text-xl font-semibold">Sidebar</h1>
+        <h1 className="text-xl font-semibold">Welcome back, {user.name}</h1>
+        <p className="text-xs">Ready to get starting?</p>
       </div>
 
       {/* Search Bar Container */}
@@ -25,10 +31,27 @@ export default function Sidebar() {
 
       {/* Navigation Items */}
       <div className="px-4 py-2">
-        <div className="flex items-center justify-between hover:bg-zinc-900 px-3 py-2 rounded-md transition-colors duration-200 cursor-pointer">
-          <p className="text-sm font-medium">My Notes</p>
+        <Link
+          to="/notes"
+          className="flex text-sm font-medium items-center justify-between hover:bg-zinc-900 px-3 py-2 rounded-md transition-colors duration-200 cursor-pointer"
+        >
+          My Notes
           <SlOptions className="text-zinc-400 hover:text-white" />
-        </div>
+        </Link>
+        <Link
+          to="/admin"
+          className="flex text-sm font-medium items-center justify-between hover:bg-zinc-900 px-3 py-2 rounded-md transition-colors duration-200 cursor-pointer"
+        >
+          Admin
+          <SlOptions className="text-zinc-400 hover:text-white" />
+        </Link>
+        <Link
+          to="/admin"
+          className="flex text-sm font-medium items-center justify-between hover:bg-zinc-900 hover:text-white text-zinc-500 px-3 py-2 rounded-md transition-colors duration-200 cursor-pointer"
+        >
+          <Logout />
+          <SlOptions className="text-zinc-400 hover:text-white" />
+        </Link>
       </div>
     </nav>
   );

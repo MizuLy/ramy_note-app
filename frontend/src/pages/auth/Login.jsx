@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../../api/auth/auth";
 import { useAuth } from "../../context/AuthProvider";
+import { login } from "../../api/axios";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { setAccessToken, setUser } = useAuth();
+  const { setAccessToken, setUser, user } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {

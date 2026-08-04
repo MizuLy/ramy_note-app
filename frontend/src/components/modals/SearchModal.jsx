@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { IoClose } from "react-icons/io5";
-import { getTags } from "../../api/Tag";
 import { useAuth } from "../../context/AuthProvider";
+import { getTags } from "../../api/axios";
 
 export default function SearchModal() {
   const [tags, setTags] = useState([]);
