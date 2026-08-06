@@ -4,10 +4,100 @@
 @tailwind components;
 @tailwind utilities;
 
-*{
+* {
   user-select: none;
 }
 
-body {
-  @apply font-instrumentsans;
+@layer base {
+  /* LIGHT Theme Overrides */
+  :root, [data-theme="light"] {
+    --text-main: #09090b;
+
+    /* Remap static white/black to adapt to light mode */
+    --color-white: 9 9 11;       /* text-white -> dark black */
+    --color-black: 255 255 255; /* bg-black -> pure white */
+
+    /* Backgrounds: Whites and soft grays */
+    --color-zinc-950: 255 255 255; /* Main bg */
+    --color-zinc-900: 244 244 245; /* Cards / Sidebar */
+    --color-zinc-800: 228 228 231; /* Inputs / Hover states / Light borders */
+    --color-zinc-700: 212 212 216; /* Darker borders */
+
+    /* Text & Icons: High contrast dark grays/blacks */
+    --color-zinc-500: 113 113 122; /* Subtext */
+    --color-zinc-400: 39 39 42;    /* Headings / Titles */
+    --color-zinc-200: 9 9 11;      /* Primary text */
+    --color-zinc-100: 0 0 0;       /* Pure black */
+  }
+
+  /* BLACK / DARK Theme Overrides */
+  [data-theme="black"], [data-theme="dark"], .dark {
+    --text-main: #e4e4e7;
+
+    --color-white: 255 255 255; /* Normal white */
+    --color-black: 0 0 0;       /* Normal black */
+
+    --color-zinc-950: 9 9 11;
+    --color-zinc-900: 24 24 27;
+    --color-zinc-800: 39 39 42;
+    --color-zinc-700: 63 63 70;
+    --color-zinc-500: 113 113 122;
+    --color-zinc-400: 161 161 170;
+    --color-zinc-200: 228 228 231;
+    --color-zinc-100: 244 244 245;
+  }
+
+  html, body, #root {
+    @apply font-instrumentsans;
+    height: 100%;
+    margin: 0;
+    background-color: rgb(var(--color-zinc-950));
+    color: rgb(var(--color-zinc-200));
+  }
+}
+
+/* Custom Utility Classes for Dynamic Text & Borders */
+@layer utilities {
+  .text-adaptive {
+    color: rgb(var(--color-zinc-200));
+  }
+
+  .border-adaptive {
+    border-color: rgb(var(--color-zinc-800));
+  }
+}
+
+/* Dynamic Tiptap / ProseMirror Editor Styling */
+.ProseMirror {
+  outline: none !important;
+  min-height: 300px;
+  white-space: pre-wrap !important;
+  color: var(--text-main);
+}
+
+.ProseMirror p { margin-bottom: 0.5rem; }
+.ProseMirror strong { font-weight: 700 !important; color: var(--text-main) !important; }
+.ProseMirror em { font-style: italic !important; }
+.ProseMirror u { text-decoration: underline !important; }
+.ProseMirror s { text-decoration: line-through !important; }
+
+.ProseMirror h1 { font-size: 1.875rem !important; font-weight: 700 !important; color: var(--text-main) !important; margin: 0.75rem 0; }
+.ProseMirror h2 { font-size: 1.5rem !important; font-weight: 600 !important; color: var(--text-main) !important; margin: 0.5rem 0; }
+.ProseMirror h3 { font-size: 1.25rem !important; font-weight: 600 !important; color: var(--text-main) !important; margin: 0.5rem 0; }
+
+.ProseMirror ul { list-style-type: disc !important; padding-left: 1.25rem !important; }
+.ProseMirror ol { list-style-type: decimal !important; padding-left: 1.25rem !important; }
+
+.ProseMirror blockquote { 
+  border-left: 3px solid rgb(var(--color-zinc-800)) !important; 
+  padding-left: 0.75rem !important; 
+  color: rgb(var(--color-zinc-400)) !important; 
+}
+
+.ProseMirror code { 
+  background-color: rgb(var(--color-zinc-800)) !important; 
+  color: var(--text-main) !important;
+  padding: 0.1rem 0.3rem !important; 
+  border-radius: 0.2rem !important; 
+  font-family: monospace !important; 
 }

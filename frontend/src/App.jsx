@@ -7,13 +7,18 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRoute from "./components/AdminRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Note from "./pages/dashboard/Note";
+import Note from "./pages/dashboard/note/Note";
+import Register from "./pages/auth/Register";
+import VerifyOTP from "./pages/auth/VerifyOTP";
+import Settings from "./pages/auth/Setting";
 
 export default function App() {
   return (
     <Routes>
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/verify-otp" element={<VerifyOTP />} />
       </Route>
 
       <Route
@@ -24,7 +29,8 @@ export default function App() {
         }
       >
         <Route path="/" element={<Dashboard />} />
-        <Route path="/notes" element={<Note />} />
+        <Route path="/notes/:id?" element={<Note />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
 
       <Route

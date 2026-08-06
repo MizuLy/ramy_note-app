@@ -4,7 +4,13 @@ import { useAuth } from "../context/AuthProvider";
 export default function ProtectedRoute({ children }) {
   const { accessToken, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-zinc-950">
+        <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-300 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!accessToken) return <Navigate to="/login" />;
 

@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthProvider";
-import { login } from "../../api/axios";
-import { useEffect } from "react";
+import { register } from "../../api/axios";
 
-export default function Login() {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+export default function Register() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { setAccessToken, setUser } = useAuth();
+  const { setAccessToken, setUser, user } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -22,14 +25,13 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await login(formData);
+      const res = await register(formData);
       setAccessToken(res.data.accessToken);
       setUser(res.data.data);
-      navigate("/");
+      navigate("/verify-otp", { state: { email: formData.email } });
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-          "Login failed. Please check your credentials.",
+        err.response?.data?.error || "Register failed. Please try again.",
       );
     } finally {
       setLoading(false);
@@ -37,7 +39,7 @@ export default function Login() {
   };
 
   useEffect(() => {
-    document.title = "Login | Ramy";
+    document.title = "Register | Ramy";
   });
 
   return (
@@ -47,7 +49,7 @@ export default function Login() {
         className="w-full max-w-sm bg-zinc-800 p-6 rounded-xl shadow-lg border border-zinc-700 space-y-4"
       >
         <h1 className="text-2xl font-bold text-center text-white mb-2">
-          Welcome Back
+          Welcome
         </h1>
 
         {/* Error Alert */}
@@ -57,15 +59,22 @@ export default function Login() {
           </div>
         )}
 
-        {error === "Please verify your email first" && (
-          <Link
-            to="/verify-otp"
-            state={{ email: formData.email }}
-            className="text-xs font-medium text-zinc-300 underline"
-          >
-            Verify now
-          </Link>
-        )}
+        {/* Name Field */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="name" className="text-sm font-medium text-zinc-300">
+            Username
+          </label>
+          <input
+            id="name"
+            type="name"
+            name="name"
+            required
+            placeholder="John Doe"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full px-3 py-2 rounded-md bg-zinc-700 text-white placeholder-zinc-400 outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+          />
+        </div>
 
         {/* Email Field */}
         <div className="flex flex-col gap-1.5">
@@ -107,20 +116,14 @@ export default function Login() {
         {/* Footer Links */}
         <div className="flex items-center justify-between text-xs pt-1">
           <div className="flex gap-1 text-zinc-400">
-            <span>Don't have an account?</span>
+            <span>Already have an account?</span>
             <Link
-              to="/register"
+              to="/login"
               className="text-blue-400 font-medium hover:underline"
             >
-              Register
+              Login
             </Link>
           </div>
-          <Link
-            to="/forgot-password"
-            className="text-zinc-400 hover:text-zinc-200 hover:underline transition-colors"
-          >
-            Forgot password?
-          </Link>
         </div>
 
         {/* Submit Button */}
@@ -131,10 +134,10 @@ export default function Login() {
         >
           {loading ? (
             <span className="loading loading-spinner loading-xs">
-              Logging in...
+              Signing up...
             </span>
           ) : (
-            "Log in"
+            "Sign up"
           )}
         </button>
       </form>
