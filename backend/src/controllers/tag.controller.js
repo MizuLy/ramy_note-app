@@ -5,13 +5,13 @@ const createTag = async (req, res) => {
     const { tag } = req.body;
 
     const isExist = await prisma.tags.count({
-      where: { tag },
+      where: { tag_userId: { tag, userId: req.user.id } },
     });
 
     if (isExist) return res.status(400).json({ error: "Tag already existed!" });
 
     const result = await prisma.tags.create({
-      data: { tag },
+      data: { tag, userId: req.user.id },
     });
 
     res.status(201).json({
@@ -29,9 +29,11 @@ const createTag = async (req, res) => {
 
 const getTags = async (req, res) => {
   try {
-    const result = await prisma.tags.findMany();
+    const result = await prisma.tags.findMany({
+      where: { userId: req.user.id },
+    });
 
-    res.status(200).json(result);
+    res.status(200).json({ status: "success", data: result });
   } catch (err) {
     res.status(500).json({ error: "Internal server error!" });
   }

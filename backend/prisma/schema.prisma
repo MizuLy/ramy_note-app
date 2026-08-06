@@ -25,6 +25,9 @@ model Users {
   notes Notes[] @relation("Owner")
   editableNotes Notes[] @relation("Editor")
   folders Folders[]
+  tags Tags[]
+  journals Journals[]
+  todos Todos[]
 }
 
 model Notes {
@@ -42,12 +45,39 @@ model Notes {
   folder Folders? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 }
 
-model Tags{
+model Todos {
   id        String @id @default(uuid())
-  tag       String @unique
+  userId    String
+  title     String
+  isDone    Boolean @default(false)
+  dueDate   DateTime?
   createdAt DateTime @default(now())
 
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Journals {
+  id        String @id @default(uuid())
+  userId    String
+  title     String?
+  body      String
+  mood      Mood?
+  entryDate DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tags{
+  id        String @id @default(uuid())
+  userId    String
+  tag       String
+  createdAt DateTime @default(now())
+
+  user Users @relation(fields: [userId], references: [id], onDelete: Cascade)
   notes Notes[]
+
+  @@unique([tag, userId])
 }
 
 model Folders{
@@ -71,4 +101,13 @@ model Otps {
 enum RoleList{
   ADMIN
   USER
+}
+
+enum Mood {
+  HAPPY
+  SAD
+  TIRED
+  ANXIOUS
+  EXCITED
+  NEUTRAL
 }

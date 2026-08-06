@@ -11,7 +11,7 @@ const createNote = async (req, res) => {
         body,
         tags: {
           connectOrCreate: tagNames.map((name) => ({
-            where: { tag: name },
+            where: { tag_userId: { tag: name, userId: req.user.id } },
             create: { tag: name },
           })),
         },
@@ -72,6 +72,39 @@ const getNotes = async (req, res) => {
 
     res.status(200).json({ status: "success", result });
   } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const getNoteId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Use findFirst to combine the Note ID with authorization checks
+    const result = await prisma.notes.findFirst({
+      where: {
+        id: id,
+        // Authorization: Must be the owner OR an authorized editor
+        OR: [
+          { userId: req.user.id },
+          { editors: { some: { id: req.user.id } } },
+        ],
+      },
+      include: {
+        tags: true,
+      },
+    });
+
+    // If note doesn't exist OR user doesn't have permission
+    if (!result) {
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Note not found or unauthorized" });
+    }
+
+    res.status(200).json({ status: "success", result });
+  } catch (err) {
+    console.error("getNoteId error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -197,6 +230,7 @@ const removeNote = async (req, res) => {
 module.exports = {
   createNote,
   getNotes,
+  getNoteId,
   updateNote,
   togglePin,
   removeNote,

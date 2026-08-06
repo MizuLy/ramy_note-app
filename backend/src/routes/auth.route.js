@@ -5,6 +5,9 @@ const {
   login,
   logout,
   getUser,
+  changeName,
+  changeEmail,
+  changePassword,
 } = require("../controllers/auth.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const { authLimiter } = require("../middlewares/rateLimiter");
@@ -16,5 +19,8 @@ router.post("/register", authLimiter, register);
 router.post("/login", authLimiter, login);
 router.post("/logout", logout);
 router.get("/current-user", verifyToken, getUser);
+router.patch("/change-name", verifyToken, changeName);
+router.patch("/change-email", verifyToken, changeEmail);
+router.patch("/change-password", verifyToken, changePassword);
 
 module.exports = router;

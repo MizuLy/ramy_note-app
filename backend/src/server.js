@@ -27,7 +27,7 @@ app.use(generalLimiter);
 
 app.use("/api/admin/dashboard", dashboardRoute);
 app.use("/api/auth", authRouter);
-app.use("/api/tag", tagRoute);
+app.use("/api/tags", tagRoute);
 app.use("/api/notes", noteRoute);
 app.use("/api/otp", otpRoute);
 

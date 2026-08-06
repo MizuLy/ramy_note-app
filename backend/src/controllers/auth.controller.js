@@ -130,6 +130,32 @@ const logout = async (req, res) => {
     .json({ status: "success", message: "Logged out succcessful!" });
 };
 
+// Change name
+const changeName = async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    const user = await prisma.users.findUnique({
+      where: { id: req.user.id },
+    });
+
+    if (!user) return res.status(404).json({ error: "User doesn't exist" });
+
+    const result = await prisma.users.update({
+      where: { id: user.id },
+      data: { name },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Name updated successfully",
+      data: { result },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 // Change email
 const changeEmail = async (req, res) => {
   try {
@@ -171,7 +197,7 @@ const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     const user = await prisma.users.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.user.id },
     });
 
     const isPassword = await bcrypt.compare(currentPassword, user.password);
@@ -212,6 +238,7 @@ module.exports = {
   register,
   login,
   logout,
+  changeName,
   changeEmail,
   changePassword,
   getUser,
