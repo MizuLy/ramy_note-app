@@ -15,7 +15,7 @@ router.post("/", verifyToken, createNote);
 router.get("/", verifyToken, getNotes);
 router.get("/:id", verifyToken, getNoteId);
 router.put("/:id", verifyToken, updateNote);
-router.patch("/:id", verifyToken, togglePin);
+router.patch("/:id", verifyToken, togglePin); // this doesn't need /:id/toggle like toggleDone in todo.route.js cuz updateNote is PUT
 router.delete("/:id", verifyToken, removeNote);
 
 module.exports = router;

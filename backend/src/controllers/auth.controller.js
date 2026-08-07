@@ -152,7 +152,7 @@ const changeName = async (req, res) => {
       data: { result },
     });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -188,7 +188,7 @@ const changeEmail = async (req, res) => {
       .status(200)
       .json({ status: "success", message: "Email has been updated" });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -216,7 +216,7 @@ const changePassword = async (req, res) => {
       .status(200)
       .json({ status: "success", message: "Password has been updated" });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 

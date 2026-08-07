@@ -10,7 +10,7 @@ const getDashboardStats = async (req, res) => {
       .status(200)
       .json({ status: "success", data: { totalUsers, totalNotes, totalTags } });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -28,7 +28,7 @@ const getAllUsers = async (req, res) => {
 
     res.status(200).json({ status: "success", data: users });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -40,7 +40,7 @@ const getAllNotes = async (req, res) => {
 
     res.status(200).json({ status: "success", data: notes });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -64,7 +64,7 @@ const changeRole = async (req, res) => {
       message: `${result.name}'s role has been updated to ${result.role}`,
     });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -89,7 +89,7 @@ const removeUser = async (req, res) => {
       .status(200)
       .json({ status: "success", message: "User has been removed" });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 

@@ -33,7 +33,7 @@ const createNote = async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -72,7 +72,7 @@ const getNotes = async (req, res) => {
 
     res.status(200).json({ status: "success", result });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -105,7 +105,7 @@ const getNoteId = async (req, res) => {
     res.status(200).json({ status: "success", result });
   } catch (err) {
     console.error("getNoteId error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -124,13 +124,13 @@ const getNoteId = async (req, res) => {
 
 //     res.status(200).json({ status: "success", result });
 //   } catch (err) {
-//     res.status(500).json({ error: "Internal server error" });
+//     res.status(500).json({ error: err.message });
 //   }
 // };
 
 const updateNote = async (req, res) => {
   try {
-    const { title, body, tagNames } = req.body;
+    const { title, body, tagNames, folderId } = req.body;
 
     const noteResult = await prisma.notes.findUnique({
       where: { id: req.params.id },
@@ -155,10 +155,11 @@ const updateNote = async (req, res) => {
       noteUpdate.tags = {
         set: [], // clear exisitng connection first
         connectOrCreate: tagNames.map((name) => ({
-          where: { tag: name },
-          create: { tag: name },
+          where: { tag_userId: { tag: name, userId: req.user.id } },
+          create: { tag: name, userId: req.user.id },
         })),
       };
+    if (folderId !== undefined) noteUpdate.folderId = folderId;
 
     const result = await prisma.notes.update({
       where: { id: noteResult.id },
@@ -172,7 +173,7 @@ const updateNote = async (req, res) => {
       data: result,
     });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -197,7 +198,7 @@ const togglePin = async (req, res) => {
 
     res.status(200).json({ status: "success", data: result });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -223,7 +224,7 @@ const removeNote = async (req, res) => {
       .status(200)
       .json({ status: "success", message: "Note deleted successfully!" });
   } catch (err) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 };
 
