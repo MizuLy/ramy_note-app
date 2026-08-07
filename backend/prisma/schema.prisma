@@ -38,6 +38,8 @@ model Notes {
   title     String?
   body      String?
   isPinned  Boolean @default(false)
+  isDeleted Boolean @default(false)
+  deletedAt DateTime?
   createdAt DateTime @default(now())
 
   user Users @relation("Owner",fields: [userId], references: [id], onDelete: Cascade)
@@ -63,6 +65,8 @@ model Journals {
   title     String?
   body      String
   mood      Mood?
+  isDeleted Boolean @default(false)
+  deletedAt DateTime?
   entryDate DateTime @default(now())
   createdAt DateTime @default(now())
 

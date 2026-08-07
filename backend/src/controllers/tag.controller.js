@@ -73,9 +73,19 @@ const removeTag = async (req, res) => {
     if (!tagResult)
       return res.status(404).json({ error: "Tag doesn't exist!" });
 
-    await prisma.tags.delete({
-      where: { id: tagResult.id },
-    });
+    if (tagResult.userId !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    await prisma.$transaction([
+      prisma.tags.update({
+        where: { id: tagResult.id },
+        data: { notes: { set: [] } },
+      }),
+      prisma.tags.delete({
+        where: { id: tagResult.id },
+      }),
+    ]);
 
     res.status(200).json({ message: "Tag deleted." });
   } catch (err) {

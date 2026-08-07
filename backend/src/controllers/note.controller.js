@@ -2,20 +2,32 @@ const { prisma } = require("../configs/db");
 
 const createNote = async (req, res) => {
   try {
-    const { title, body, tagNames } = req.body;
+    const { title, body, tagNames, folderId } = req.body;
+
+    const data = {
+      title,
+      userId: req.user.id,
+      body,
+      tags: {
+        connectOrCreate: (tagNames || []).map((name) => ({
+          where: { tag_userId: { tag: name, userId: req.user.id } },
+          create: { tag: name },
+        })),
+      },
+    };
+
+    if (folderId) {
+      const folder = await prisma.folders.findFirst({
+        where: { id: folderId, userId: req.user.id },
+      });
+      if (!folder) {
+        return res.status(400).json({ error: "Invalid folder" });
+      }
+      data.folderId = folderId;
+    }
 
     const result = await prisma.notes.create({
-      data: {
-        title,
-        userId: req.user.id,
-        body,
-        tags: {
-          connectOrCreate: tagNames.map((name) => ({
-            where: { tag_userId: { tag: name, userId: req.user.id } },
-            create: { tag: name },
-          })),
-        },
-      },
+      data,
       include: { tags: true },
     });
 
@@ -25,10 +37,11 @@ const createNote = async (req, res) => {
       data: {
         id: result.id,
         userId: result.userId,
-        title: title,
-        body: body,
+        title: result.title,
+        body: result.body,
         tags: result.tags,
         isPinned: result.isPinned,
+        folderId: result.folderId,
         createdAt: result.createdAt,
       },
     });
@@ -39,7 +52,8 @@ const createNote = async (req, res) => {
 
 const getNotes = async (req, res) => {
   try {
-    const { tag, pinned, search, page = 1, limit = 10 } = req.query;
+    const { tag, pinned, search, page = 1, limit = 500, trash } = req.query;
+    const inTrash = trash === "true";
 
     const where = {
       AND: [
@@ -49,6 +63,7 @@ const getNotes = async (req, res) => {
             { editors: { some: { id: req.user.id } } },
           ],
         },
+        { isDeleted: inTrash },
         tag ? { tags: { some: { tag } } } : {},
         pinned !== undefined ? { isPinned: pinned === "true" } : {},
         search
@@ -81,10 +96,12 @@ const getNoteId = async (req, res) => {
     const { id } = req.params;
 
     // Use findFirst to combine the Note ID with authorization checks
+    const inTrash = req.query.trash === "true";
+
     const result = await prisma.notes.findFirst({
       where: {
         id: id,
-        // Authorization: Must be the owner OR an authorized editor
+        isDeleted: inTrash,
         OR: [
           { userId: req.user.id },
           { editors: { some: { id: req.user.id } } },
@@ -216,13 +233,73 @@ const removeNote = async (req, res) => {
         .json({ error: "Not authorized to remove this note" });
     }
 
-    await prisma.notes.delete({
+    await prisma.notes.update({
       where: { id: noteResult.id },
+      data: { isDeleted: true, deletedAt: new Date() },
     });
 
     res
       .status(200)
-      .json({ status: "success", message: "Note deleted successfully!" });
+      .json({ status: "success", message: "Note moved to trash" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const restoreNote = async (req, res) => {
+  try {
+    const noteResult = await prisma.notes.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!noteResult) return res.status(404).json({ error: "Note not found" });
+
+    if (noteResult.userId !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    const result = await prisma.notes.update({
+      where: { id: noteResult.id },
+      data: { isDeleted: false, deletedAt: null },
+      include: { tags: true },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Note restored",
+      data: result,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const permanentDeleteNote = async (req, res) => {
+  try {
+    const noteResult = await prisma.notes.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!noteResult) return res.status(404).json({ error: "Note not found" });
+
+    if (noteResult.userId !== req.user.id) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    if (!noteResult.isDeleted) {
+      return res
+        .status(400)
+        .json({ error: "Move the note to trash before deleting permanently" });
+    }
+
+    await prisma.notes.delete({
+      where: { id: noteResult.id },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Note permanently deleted",
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -235,4 +312,6 @@ module.exports = {
   updateNote,
   togglePin,
   removeNote,
+  restoreNote,
+  permanentDeleteNote,
 };

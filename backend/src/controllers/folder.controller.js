@@ -87,18 +87,23 @@ const removeFolder = async (req, res) => {
 
     if (!folder) return res.status(404).json({ error: "Folder not found" });
 
-    if (folder.userId !== req.user.id)
-      return res.status(403).json({ error: "Not authorized" });
+    if (folder.userId !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this folder" });
+    }
 
-    await prisma.folders.delete({
-      where: { id: folder.id },
-    });
+    await prisma.$transaction([
+      prisma.notes.updateMany({
+        where: { folderId: folder.id },
+        data: { folderId: null },
+      }),
+      prisma.folders.delete({ where: { id: folder.id } }),
+    ]);
 
-    res
-      .status(200)
-      .json({ status: "success", message: "Folder deleted successfully" });
+    res.status(200).json({ status: "success", message: "Folder deleted" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
