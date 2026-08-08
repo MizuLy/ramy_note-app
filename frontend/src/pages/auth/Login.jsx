@@ -24,7 +24,14 @@ export default function Login() {
     try {
       const res = await login(formData);
       setAccessToken(res.data.accessToken);
-      setUser(res.data.data);
+
+      const userData = res.data.data;
+      const avatarUrl = userData?.image || userData?.avatar;
+      setUser({
+        ...userData,
+        avatar: avatarUrl,
+        image: avatarUrl,
+      });
       navigate("/");
     } catch (err) {
       setError(

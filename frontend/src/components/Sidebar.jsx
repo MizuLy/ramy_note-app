@@ -284,6 +284,13 @@ export default function Sidebar() {
             )}
           </NavLink>
 
+          <NavLink to="/trash" className={getLinkClass} title="Trash">
+            <LuTrash2 size={20} className="shrink-0" />
+            {!collapsed && (
+              <span className="text-sm flex-1 truncate">Trash</span>
+            )}
+          </NavLink>
+
           {/* FOLDERS SECTION */}
           <div className="px-3 py-2">
             {!collapsed && (

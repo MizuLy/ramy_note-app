@@ -16,6 +16,7 @@ import {
   LuPlus,
 } from "react-icons/lu";
 import toast from "react-hot-toast";
+import ConfirmModal from "../../../components/modals/ConfirmModal";
 
 // Helper function to convert raw HTML body into plain text preview
 const stripHtml = (html) => {
@@ -125,6 +126,8 @@ export default function NoteList({
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -230,13 +233,15 @@ export default function NoteList({
     }
   };
 
-  const handleDeleteForever = async (e, noteId) => {
+  const handleDeleteForeverRequest = (e, noteId) => {
     e.stopPropagation();
-    if (
-      !window.confirm("Delete this note permanently? This cannot be undone.")
-    ) {
-      return;
-    }
+    setPendingDeleteId(noteId);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteForever = async () => {
+    const noteId = pendingDeleteId;
+    if (!noteId) return;
     try {
       await permanentDeleteNote(noteId, accessToken);
       toast.success("Note permanently deleted");
@@ -245,6 +250,9 @@ export default function NoteList({
     } catch (err) {
       console.error("Failed to delete note:", err);
       toast.error("Failed to delete note");
+    } finally {
+      setConfirmOpen(false);
+      setPendingDeleteId(null);
     }
   };
 
@@ -383,7 +391,7 @@ export default function NoteList({
                         <LuRotateCcw size={12} />
                       </button>
                       <button
-                        onClick={(e) => handleDeleteForever(e, id)}
+                        onClick={(e) => handleDeleteForeverRequest(e, id)}
                         className="p-1 hover:text-red-400 transition-colors"
                         title="Delete permanently"
                       >
@@ -397,6 +405,17 @@ export default function NoteList({
           })
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Delete note permanently?"
+        message="This will permanently delete the note. This action cannot be undone."
+        onClose={() => {
+          setConfirmOpen(false);
+          setPendingDeleteId(null);
+        }}
+        onConfirm={handleConfirmDeleteForever}
+      />
     </div>
   );
 }

@@ -6,11 +6,15 @@ import {
   createNote,
   getFolders,
   getTags,
+  deleteNote,
+  restoreNote,
+  permanentDeleteNote,
 } from "../../../api/axios";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import toast from "react-hot-toast";
+import ConfirmModal from "../../../components/modals/ConfirmModal";
 
 import {
   LuPin,
@@ -31,6 +35,8 @@ import {
   LuX,
   LuUser,
   LuCalendar,
+  LuTrash2,
+  LuRotateCcw,
 } from "react-icons/lu";
 
 const getWordCount = (text) => {
@@ -73,7 +79,9 @@ export default function NoteEditor({
   noteId,
   onNoteUpdated,
   onSelectNote,
+  onTrashed,
   defaultFolderId = "",
+  isTrash = false,
 }) {
   const { accessToken, user } = useAuth();
   const [title, setTitle] = useState("");
@@ -84,6 +92,8 @@ export default function NoteEditor({
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const [createdAtRaw, setCreatedAtRaw] = useState(null);
   const [updatedAtRaw, setUpdatedAtRaw] = useState(null);
+  const [trashing, setTrashing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const [folders, setFolders] = useState([]);
   const [folderId, setFolderId] = useState("");
@@ -257,7 +267,7 @@ export default function NoteEditor({
 
   // Tiptap Setup
   const editor = useEditor({
-    extensions: [StarterKit, Underline],
+    extensions: [StarterKit],
     content: "",
     editorProps: {
       attributes: {
@@ -302,7 +312,7 @@ export default function NoteEditor({
 
     const fetchNote = async () => {
       try {
-        const data = await getNoteId(noteId, accessToken);
+        const data = await getNoteId(noteId, accessToken, { trash: isTrash });
         const found = data?.data || data?.result || data;
 
         if (found && !cancelled && editor && !editor.isDestroyed) {
@@ -402,6 +412,56 @@ export default function NoteEditor({
     }
   };
 
+  const handleMoveToTrash = async () => {
+    if (!noteId) return;
+    setTrashing(true);
+    try {
+      await deleteNote(noteId, accessToken);
+      toast.success("Note moved to trash");
+      onTrashed?.();
+    } catch (err) {
+      console.error("Failed to move to trash:", err);
+      toast.error(err?.response?.data?.error || "Failed to move to trash");
+    } finally {
+      setTrashing(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!noteId) return;
+    setTrashing(true);
+    try {
+      await restoreNote(noteId, accessToken);
+      toast.success("Note restored");
+      onNoteUpdated?.();
+    } catch (err) {
+      console.error("Failed to restore note:", err);
+      toast.error(err?.response?.data?.error || "Failed to restore note");
+    } finally {
+      setTrashing(false);
+    }
+  };
+
+  const handleDeleteForeverRequest = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!noteId) return;
+    setTrashing(true);
+    try {
+      await permanentDeleteNote(noteId, accessToken);
+      toast.success("Note permanently deleted");
+      onTrashed?.();
+    } catch (err) {
+      console.error("Failed to delete note permanently:", err);
+      toast.error(err?.response?.data?.error || "Failed to delete note");
+    } finally {
+      setConfirmOpen(false);
+      setTrashing(false);
+    }
+  };
+
   if (!noteId) {
     return (
       <div className="flex-1 h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-500 select-none">
@@ -446,47 +506,84 @@ export default function NoteEditor({
           </span>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Folder selection dropdown */}
-            <div className="relative flex items-center">
-              <LuFolder
-                size={12}
-                className="absolute left-2 text-zinc-500 pointer-events-none"
-              />
-              <select
-                value={folderId}
-                onChange={handleFolderChange}
-                title="Move to folder"
-                className="appearance-none bg-transparent border border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs rounded-md pl-6 pr-2 py-1.5 outline-none cursor-pointer max-w-[110px]"
-              >
-                <option value="" className="bg-zinc-900">
-                  No folder
-                </option>
-                {folders.map((folder) => {
-                  const id = folder.id || folder._id;
-                  return (
-                    <option key={id} value={id} className="bg-zinc-900">
-                      {folder.name}
+            {!isTrash && (
+              <>
+                {/* Folder selection dropdown */}
+                <div className="relative flex items-center">
+                  <LuFolder
+                    size={12}
+                    className="absolute left-2 text-zinc-500 pointer-events-none"
+                  />
+                  <select
+                    value={folderId}
+                    onChange={handleFolderChange}
+                    title="Move to folder"
+                    className="appearance-none bg-transparent border border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs rounded-md pl-6 pr-2 py-1.5 outline-none cursor-pointer max-w-[110px]"
+                  >
+                    <option value="" className="bg-zinc-900">
+                      No folder
                     </option>
-                  );
-                })}
-              </select>
-            </div>
+                    {folders.map((folder) => {
+                      const id = folder.id || folder._id;
+                      return (
+                        <option key={id} value={id} className="bg-zinc-900">
+                          {folder.name}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
 
-            <button
-              type="button"
-              onClick={handleTogglePin}
-              title={isPinned ? "Unpin note" : "Pin note"}
-              className={`p-1.5 rounded-md border transition-colors ${
-                isPinned
-                  ? "bg-zinc-100 text-zinc-900 border-zinc-100"
-                  : "text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800"
-              }`}
-            >
-              <LuPin
-                size={13}
-                className={isPinned ? "rotate-45 transition-transform" : ""}
-              />
-            </button>
+                <button
+                  type="button"
+                  onClick={handleTogglePin}
+                  title={isPinned ? "Unpin note" : "Pin note"}
+                  className={`p-1.5 rounded-md border transition-colors ${
+                    isPinned
+                      ? "bg-zinc-100 text-zinc-900 border-zinc-100"
+                      : "text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800"
+                  }`}
+                >
+                  <LuPin
+                    size={13}
+                    className={isPinned ? "rotate-45 transition-transform" : ""}
+                  />
+                </button>
+              </>
+            )}
+
+            {!isTrash ? (
+              <button
+                type="button"
+                onClick={handleMoveToTrash}
+                disabled={trashing || saving}
+                title="Move to trash"
+                className="p-1.5 rounded-md border border-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-50"
+              >
+                <LuTrash2 size={13} />
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleRestore}
+                  disabled={trashing || saving}
+                  title="Restore note"
+                  className="p-1.5 rounded-md border border-zinc-800 text-zinc-400 hover:text-green-400 hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  <LuRotateCcw size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteForeverRequest}
+                  disabled={trashing || saving}
+                  title="Delete permanently"
+                  className="p-1.5 rounded-md border border-zinc-800 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                >
+                  <LuTrash2 size={13} />
+                </button>
+              </>
+            )}
 
             <button
               type="button"
@@ -499,15 +596,17 @@ export default function NoteEditor({
               <span>{saving ? "Saving..." : "Save"}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleCreateNew}
-              disabled={creating}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
-            >
-              <LuPlus size={12} />
-              <span>{creating ? "Creating..." : "New Note"}</span>
-            </button>
+            {!isTrash && (
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                disabled={creating}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+              >
+                <LuPlus size={12} />
+                <span>{creating ? "Creating..." : "New Note"}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -778,6 +877,14 @@ export default function NoteEditor({
           <EditorContent editor={editor} />
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Delete note permanently?"
+        message="This will permanently delete the note. This action cannot be undone."
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
