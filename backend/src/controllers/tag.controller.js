@@ -4,7 +4,7 @@ const createTag = async (req, res) => {
   try {
     const { tag } = req.body;
 
-    const isExist = await prisma.tags.count({
+    const isExist = await prisma.tags.findUnique({
       where: { tag_userId: { tag, userId: req.user.id } },
     });
 

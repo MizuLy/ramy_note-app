@@ -10,6 +10,7 @@ const tagRoute = require("./routes/tag.route");
 const noteRoute = require("./routes/note.route");
 const todoRoute = require("./routes/todo.route");
 const folderRoute = require("./routes/folder.route");
+const journalRoute = require("./routes/journal.route");
 
 const { generalLimiter } = require("./middlewares/rateLimiter");
 
@@ -34,6 +35,7 @@ app.use("/api/tags", tagRoute);
 app.use("/api/notes", noteRoute);
 app.use("/api/todos", todoRoute);
 app.use("/api/folders", folderRoute);
+app.use("/api/journals", journalRoute);
 
 app.listen(PORT, () =>
   console.log(`Server is running on http://localhost:${PORT}`),

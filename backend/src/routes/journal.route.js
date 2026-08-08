@@ -1,0 +1,19 @@
+const express = require("express");
+const {
+  getJournals,
+  createJournal,
+  updateJournal,
+  removeJournal,
+  getJournalId,
+} = require("../controllers/journal.controller");
+const verifyToken = require("../middlewares/verifyToken");
+
+const router = express.Router();
+
+router.get("/", verifyToken, getJournals);
+router.post("/", verifyToken, createJournal);
+router.put("/:id", verifyToken, updateJournal);
+router.delete("/:id", verifyToken, removeJournal);
+router.get("/:id", verifyToken, getJournalId);
+
+module.exports = router;
