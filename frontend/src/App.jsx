@@ -15,6 +15,7 @@ import Settings from "./pages/auth/Setting";
 import Todo from "./pages/dashboard/todo/Todo";
 import Journal from "./pages/dashboard/journal/Journal";
 import { Toaster } from "react-hot-toast";
+import NotFound from "./error/NotFound";
 
 export default function App() {
   return (
@@ -79,6 +80,7 @@ export default function App() {
         >
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
