@@ -233,6 +233,21 @@ const getUser = async (req, res) => {
   }
 };
 
+const changeAvatar = async (req, res) => {
+  try {
+    const imageUrl = req.file.path;
+
+    const result = await prisma.users.update({
+      where: { id: req.user.id },
+      data: { image: imageUrl },
+    });
+
+    res.status(200).json({ status: "success", data: { image: imageUrl } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   refresh,
   register,
@@ -242,4 +257,5 @@ module.exports = {
   changeEmail,
   changePassword,
   getUser,
+  changeAvatar,
 };

@@ -8,9 +8,11 @@ const {
   changeName,
   changeEmail,
   changePassword,
+  changeAvatar,
 } = require("../controllers/auth.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const { authLimiter } = require("../middlewares/rateLimiter");
+const upload = require("../configs/upload");
 
 const router = express.Router();
 
@@ -22,5 +24,11 @@ router.get("/current-user", verifyToken, getUser);
 router.patch("/change-name", verifyToken, changeName);
 router.patch("/change-email", verifyToken, changeEmail);
 router.patch("/change-password", verifyToken, changePassword);
+router.patch(
+  "/change-avatar",
+  verifyToken,
+  upload.single("image"),
+  changeAvatar,
+);
 
 module.exports = router;
