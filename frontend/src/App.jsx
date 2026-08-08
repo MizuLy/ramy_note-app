@@ -11,6 +11,8 @@ import Note from "./pages/dashboard/note/Note";
 import Register from "./pages/auth/Register";
 import VerifyOTP from "./pages/auth/VerifyOTP";
 import Settings from "./pages/auth/Setting";
+import Todo from "./pages/dashboard/todo/Todo";
+import Journal from "./pages/dashboard/journal/Journal";
 
 export default function App() {
   return (
@@ -29,7 +31,12 @@ export default function App() {
         }
       >
         <Route path="/" element={<Dashboard />} />
+        <Route path="/folders/:folderId/:noteId?" element={<Note />} />
+        <Route path="/tags/:tagId/:noteId?" element={<Note />} />
+        <Route path="/trash/:id?" element={<Note />} />
         <Route path="/notes/:id?" element={<Note />} />
+        <Route path="/todos" element={<Todo />} />
+        <Route path="/journals" element={<Journal />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
 

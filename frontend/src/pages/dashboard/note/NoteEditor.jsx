@@ -4,7 +4,8 @@ import {
   getNoteId,
   updateNote,
   createNote,
-  togglePin,
+  getFolders,
+  getTags,
 } from "../../../api/axios";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -24,9 +25,13 @@ import {
   LuUndo,
   LuRedo,
   LuSave,
+  LuFolder,
+  LuTag,
+  LuX,
+  LuUser,
+  LuCalendar,
 } from "react-icons/lu";
 
-// Counts words in plain text (whitespace-separated, ignoring empties)
 const getWordCount = (text) => {
   if (!text) return 0;
   const trimmed = text.trim();
@@ -34,7 +39,6 @@ const getWordCount = (text) => {
   return trimmed.split(/\s+/).filter(Boolean).length;
 };
 
-// Formats a Date as a short relative string: "just now", "5m ago", etc.
 const formatRelativeTime = (date) => {
   if (!date) return null;
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -49,36 +53,56 @@ const formatRelativeTime = (date) => {
   return date.toLocaleDateString();
 };
 
-// ~200 wpm average reading speed, minimum of 1 minute
+const formatDateFormatted = (dateStr) => {
+  if (!dateStr) return "N/A";
+  const date = new Date(dateStr);
+  return date.toLocaleString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
 const getReadTime = (words) => Math.max(1, Math.round(words / 200));
 
-export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
-  const { accessToken } = useAuth();
+export default function NoteEditor({
+  noteId,
+  onNoteUpdated,
+  onSelectNote,
+  defaultFolderId = "",
+}) {
+  const { accessToken, user } = useAuth();
   const [title, setTitle] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [createdAtRaw, setCreatedAtRaw] = useState(null);
+  const [updatedAtRaw, setUpdatedAtRaw] = useState(null);
+
+  const [folders, setFolders] = useState([]);
+  const [folderId, setFolderId] = useState("");
+
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]); // Stores tag objects/names
 
   const activeNoteIdRef = useRef(noteId);
   const titleRef = useRef(title);
   const isPinnedRef = useRef(isPinned);
+  const selectedTagsRef = useRef(selectedTags);
   const saveTimeoutRef = useRef(null);
-  // Guards onUpdate from firing debounced saves while we're
-  // programmatically loading a note's content into the editor.
   const isLoadingRef = useRef(false);
 
-  // Forces a re-render every 30s so the relative "Saved Xm ago" label
-  // keeps advancing even without new saves happening.
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
-  // Keep activeNoteIdRef in sync + cancel any save still pending for the
-  // previously active note so it can never land on the newly active one.
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -95,17 +119,48 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
     isPinnedRef.current = isPinned;
   }, [isPinned]);
 
-  // targetId is bound at schedule time (in debouncedSave), not resolved
-  // again when the timeout fires — this is what prevents a stale save
-  // from a previous note landing on whatever note is active later.
-  const performSave = async (targetId, newTitle, newBody, newPinned) => {
+  useEffect(() => {
+    selectedTagsRef.current = selectedTags;
+  }, [selectedTags]);
+
+  // Load Folders & Tags list
+  useEffect(() => {
+    if (!accessToken) return;
+    const fetchData = async () => {
+      try {
+        const [foldersRes, tagsRes] = await Promise.all([
+          getFolders(accessToken),
+          getTags(accessToken),
+        ]);
+        const fList =
+          foldersRes?.data || foldersRes?.result || foldersRes || [];
+        const tList = tagsRes?.data || tagsRes?.result || tagsRes || [];
+        setFolders(Array.isArray(fList) ? fList : []);
+        setAvailableTags(Array.isArray(tList) ? tList : []);
+      } catch (err) {
+        console.error("Failed to load options:", err);
+      }
+    };
+    fetchData();
+  }, [accessToken]);
+
+  const performSave = async (
+    targetId,
+    newTitle,
+    newBody,
+    newPinned,
+    tagsList,
+  ) => {
     if (!targetId) return;
 
     setSaving(true);
     try {
+      const tagNames = tagsList.map((t) =>
+        typeof t === "string" ? t : t.tag || t.name || t.tagName,
+      );
       await updateNote(
         targetId,
-        { title: newTitle, body: newBody, isPinned: newPinned },
+        { title: newTitle, body: newBody, isPinned: newPinned, tagNames },
         accessToken,
       );
       setLastSavedAt(new Date());
@@ -117,12 +172,12 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
     }
   };
 
-  const debouncedSave = (newTitle, newBody, newPinned) => {
-    const targetId = activeNoteIdRef.current; // capture now, while correct
+  const debouncedSave = (newTitle, newBody, newPinned, tagsList) => {
+    const targetId = activeNoteIdRef.current;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(() => {
-      performSave(targetId, newTitle, newBody, newPinned);
+      performSave(targetId, newTitle, newBody, newPinned, tagsList);
     }, 800);
   };
 
@@ -133,7 +188,59 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
       title,
       editor?.getHTML() || "",
       isPinned,
+      selectedTags,
     );
+  };
+
+  const handleFolderChange = async (e) => {
+    const targetId = activeNoteIdRef.current;
+    const newFolderId = e.target.value || null;
+    setFolderId(e.target.value);
+    if (!targetId) return;
+
+    try {
+      await updateNote(targetId, { folderId: newFolderId }, accessToken);
+      setLastSavedAt(new Date());
+      onNoteUpdated?.();
+    } catch (err) {
+      console.error("Failed to change folder:", err);
+    }
+  };
+
+  const handleAddTag = (e) => {
+    const tagVal = e.target.value;
+    if (!tagVal) return;
+
+    const exists = selectedTags.some(
+      (t) => (t.id || t._id || t.name || t.tag || t) === tagVal,
+    );
+
+    if (!exists) {
+      const foundTag =
+        availableTags.find(
+          (t) => (t.id || t._id || t.name || t.tag) === tagVal,
+        ) || tagVal;
+
+      const updated = [...selectedTags, foundTag];
+      setSelectedTags(updated);
+      debouncedSave(title, editor?.getHTML() || "", isPinned, updated);
+    }
+    e.target.value = "";
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    const targetVal =
+      tagToRemove.id ||
+      tagToRemove._id ||
+      tagToRemove.name ||
+      tagToRemove.tag ||
+      tagToRemove;
+    const updated = selectedTags.filter((t) => {
+      const val = t.id || t._id || t.name || t.tag || t;
+      return val !== targetVal;
+    });
+    setSelectedTags(updated);
+    debouncedSave(title, editor?.getHTML() || "", isPinned, updated);
   };
 
   // Tiptap Setup
@@ -148,21 +255,27 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
     },
     onUpdate: ({ editor }) => {
       setWordCount(getWordCount(editor.getText()));
-      if (isLoadingRef.current) return; // ignore programmatic updates
+      if (isLoadingRef.current) return;
       if (activeNoteIdRef.current) {
-        debouncedSave(titleRef.current, editor.getHTML(), isPinnedRef.current);
+        debouncedSave(
+          titleRef.current,
+          editor.getHTML(),
+          isPinnedRef.current,
+          selectedTagsRef.current,
+        );
       }
     },
-    onSelectionUpdate: () => {},
   });
 
-  // Fetch note with SAFE editor + destroyed checks
+  // Load Note
   useEffect(() => {
     if (!noteId) {
       setTitle("");
       setIsPinned(false);
       setWordCount(0);
       setLastSavedAt(null);
+      setFolderId("");
+      setSelectedTags([]);
       if (editor && !editor.isDestroyed) {
         isLoadingRef.current = true;
         editor.commands.setContent("", { emitUpdate: false });
@@ -181,13 +294,22 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
         const found = data?.data || data?.result || data;
 
         if (found && !cancelled && editor && !editor.isDestroyed) {
-          isLoadingRef.current = true; // block onUpdate before touching state
+          isLoadingRef.current = true;
 
           setTitle(found.title || "");
-
           const pinnedValue =
             found.isPinned ?? found.pinned ?? found.is_pinned ?? false;
           setIsPinned(pinnedValue);
+          setFolderId(found.folderId || "");
+
+          const initialTags = found.tags || found.tagNames || [];
+          setSelectedTags(Array.isArray(initialTags) ? initialTags : []);
+          selectedTagsRef.current = Array.isArray(initialTags)
+            ? initialTags
+            : [];
+
+          setCreatedAtRaw(found.createdAt);
+          setUpdatedAtRaw(found.updatedAt);
 
           editor.commands.setContent(found.body || "", { emitUpdate: false });
           setWordCount(getWordCount(editor.getText()));
@@ -195,9 +317,6 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
           const savedTimestamp = found.updatedAt || found.createdAt;
           setLastSavedAt(savedTimestamp ? new Date(savedTimestamp) : null);
 
-          // Also sync the refs immediately — don't wait for the sync
-          // effects to run on next render, in case anything reads them
-          // before then (e.g. a save scheduled in the same tick).
           titleRef.current = found.title || "";
           isPinnedRef.current = pinnedValue;
 
@@ -220,10 +339,9 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
   const handleCreateNew = async () => {
     setCreating(true);
     try {
-      const res = await createNote(
-        { title: "", body: "", tagNames: [] },
-        accessToken,
-      );
+      const payload = { title: "", body: "", tagNames: [] };
+      if (defaultFolderId) payload.folderId = defaultFolderId;
+      const res = await createNote(payload, accessToken);
 
       const resData = res?.data || res;
       const newNote = resData?.data || resData?.result || resData;
@@ -233,6 +351,8 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
         setTitle(newNote.title || "");
         setWordCount(0);
         setLastSavedAt(new Date());
+        setFolderId(newNote.folderId || defaultFolderId || "");
+        setSelectedTags([]);
         if (editor && !editor.isDestroyed) {
           isLoadingRef.current = true;
           editor.commands.setContent("", { emitUpdate: false });
@@ -257,7 +377,7 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
     setIsPinned(nextPinnedState);
 
     try {
-      await togglePin(noteId, nextPinnedState, accessToken);
+      await updateNote(noteId, { isPinned: nextPinnedState }, accessToken);
       onNoteUpdated?.();
     } catch (err) {
       console.error("Failed to toggle pin state:", err);
@@ -291,249 +411,360 @@ export default function NoteEditor({ noteId, onNoteUpdated, onSelectNote }) {
   const readTime = getReadTime(wordCount);
 
   return (
-    <div className="flex-1 h-screen flex flex-col bg-zinc-950  text-zinc-200 overflow-hidden">
-      {/* Top action bar */}
-      <div className="px-8 pt-5 flex items-center justify-between">
-        <span
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${
-            saving
-              ? "text-zinc-300 border-zinc-700 bg-zinc-900"
-              : "text-zinc-500 border-zinc-800 bg-zinc-900/60"
-          }`}
+    <div className="flex-1 h-screen flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden">
+      <div className="w-full max-w-2xl mx-auto flex flex-col h-full">
+        {/* Top action bar */}
+        <div className="px-4 pt-4 flex items-center justify-between gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border shrink-0 ${
+              saving
+                ? "text-zinc-300 border-zinc-700 bg-zinc-900"
+                : "text-zinc-500 border-zinc-800 bg-zinc-900/60"
+            }`}
+          >
+            {saving && (
+              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
+            )}
+            {savedLabel}
+          </span>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Folder selection dropdown */}
+            <div className="relative flex items-center">
+              <LuFolder
+                size={12}
+                className="absolute left-2 text-zinc-500 pointer-events-none"
+              />
+              <select
+                value={folderId}
+                onChange={handleFolderChange}
+                title="Move to folder"
+                className="appearance-none bg-transparent border border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs rounded-md pl-6 pr-2 py-1.5 outline-none cursor-pointer max-w-[110px]"
+              >
+                <option value="" className="bg-zinc-900">
+                  No folder
+                </option>
+                {folders.map((folder) => {
+                  const id = folder.id || folder._id;
+                  return (
+                    <option key={id} value={id} className="bg-zinc-900">
+                      {folder.name}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleTogglePin}
+              title={isPinned ? "Unpin note" : "Pin note"}
+              className={`p-1.5 rounded-md border transition-colors ${
+                isPinned
+                  ? "bg-zinc-100 text-zinc-900 border-zinc-100"
+                  : "text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800"
+              }`}
+            >
+              <LuPin
+                size={13}
+                className={isPinned ? "rotate-45 transition-transform" : ""}
+              />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleManualSave}
+              disabled={saving}
+              title="Save note"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+            >
+              <LuSave size={12} className={saving ? "animate-pulse" : ""} />
+              <span>{saving ? "Saving..." : "Save"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCreateNew}
+              disabled={creating}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+            >
+              <LuPlus size={12} />
+              <span>{creating ? "Creating..." : "New Note"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Title input */}
+        <div className="px-4 pt-3">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => {
+              const val = e.target.value;
+              setTitle(val);
+              debouncedSave(
+                val,
+                editor?.getHTML() || "",
+                isPinned,
+                selectedTags,
+              );
+            }}
+            placeholder="Untitled"
+            className="text-2xl font-extrabold bg-transparent text-white outline-none w-full placeholder-zinc-700 tracking-tight"
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            {wordCount} {wordCount === 1 ? "word" : "words"} · {readTime}{" "}
+            {readTime === 1 ? "min" : "min"} read
+          </p>
+        </div>
+
+        {/* METADATA SECTION (Created By, Last Modified, Tags) */}
+        <div className="px-4 pt-4 pb-2 space-y-2.5 text-xs text-zinc-400">
+          {/* Created by */}
+          <div className="flex items-center gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
+              <LuUser size={13} /> Created by
+            </span>
+            <div className="flex items-center gap-2 text-zinc-300 font-medium">
+              <span>{user?.name || user?.username || "You"}</span>
+            </div>
+          </div>
+
+          {/* Last Modified */}
+          <div className="flex items-center gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
+              <LuCalendar size={13} /> Last Modified
+            </span>
+            <span className="text-zinc-300 font-medium">
+              {formatDateFormatted(updatedAtRaw || createdAtRaw)}
+            </span>
+          </div>
+
+          {/* Tags Multi-select */}
+          <div className="flex items-start gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 pt-1">
+              <LuTag size={13} /> Tags
+            </span>
+            <div className="flex-1 flex flex-wrap items-center gap-1.5">
+              {/* Active Badges */}
+              {selectedTags.map((tagObj, idx) => {
+                const label =
+                  typeof tagObj === "string"
+                    ? tagObj
+                    : tagObj.tag || tagObj.name || tagObj.tagName || "Tag";
+                const key = tagObj.id || tagObj._id || idx;
+
+                return (
+                  <span
+                    key={key}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs font-medium"
+                  >
+                    {label}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tagObj)}
+                      className="text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <LuX size={12} />
+                    </button>
+                  </span>
+                );
+              })}
+
+              {/* Tag Picker Dropdown */}
+              <div className="relative inline-flex items-center">
+                <select
+                  defaultValue=""
+                  onChange={handleAddTag}
+                  className="appearance-none bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 text-xs rounded px-2 py-1 outline-none cursor-pointer"
+                >
+                  <option value="" disabled>
+                    + Add tag
+                  </option>
+                  {availableTags.map((t) => {
+                    const tagId = t.id || t._id || t.name || t.tag;
+                    const tagName = t.tag || t.name || t.tagName;
+                    return (
+                      <option key={tagId} value={tagId} className="bg-zinc-900">
+                        {tagName}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        {editor && (
+          <div className="mx-4 mt-2 border-y border-zinc-800/80 py-1.5 flex items-center gap-0.5 text-zinc-400 text-xs select-none overflow-x-auto">
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 1 }).run()
+              }
+              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("heading", { level: 1 })
+                  ? "bg-zinc-800 text-white"
+                  : ""
+              }`}
+            >
+              H1
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("heading", { level: 2 })
+                  ? "bg-zinc-800 text-white"
+                  : ""
+              }`}
+            >
+              H2
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 3 }).run()
+              }
+              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("heading", { level: 3 })
+                  ? "bg-zinc-800 text-white"
+                  : ""
+              }`}
+            >
+              H3
+            </button>
+
+            <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("bold") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuBold size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("italic") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuItalic size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("underline") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuUnderline size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("strike") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuStrikethrough size={13} />
+            </button>
+
+            <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("bulletList") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuList size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("orderedList") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuListOrdered size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("codeBlock") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuCode size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+                editor.isActive("blockquote") ? "bg-zinc-800 text-white" : ""
+              }`}
+            >
+              <LuQuote size={13} />
+            </button>
+
+            <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().undo().run()}
+              className="p-1 rounded hover:bg-zinc-800 hover:text-white"
+            >
+              <LuUndo size={13} />
+            </button>
+
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => editor.chain().focus().redo().run()}
+              className="p-1 rounded hover:bg-zinc-800 hover:text-white"
+            >
+              <LuRedo size={13} />
+            </button>
+          </div>
+        )}
+
+        {/* Editor Canvas */}
+        <div
+          className="flex-1 px-4 py-4 overflow-y-auto cursor-text"
+          onClick={() => editor?.chain().focus().run()}
         >
-          {saving && (
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
-          )}
-          {savedLabel}
-        </span>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleTogglePin}
-            title={isPinned ? "Unpin note" : "Pin note"}
-            className={`p-2 rounded-md border transition-colors ${
-              isPinned
-                ? "bg-zinc-100 text-zinc-900 border-zinc-100"
-                : "text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800"
-            }`}
-          >
-            <LuPin
-              size={14}
-              className={isPinned ? "rotate-45 transition-transform" : ""}
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleManualSave}
-            disabled={saving}
-            title="Save note"
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
-          >
-            <LuSave size={13} className={saving ? "animate-pulse" : ""} />
-            <span>{saving ? "Saving..." : "Save"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleCreateNew}
-            disabled={creating}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
-          >
-            <LuPlus size={13} />
-            <span>{creating ? "Creating..." : "New Note"}</span>
-          </button>
+          <EditorContent editor={editor} />
         </div>
-      </div>
-
-      {/* Title + metadata */}
-      <div className="px-8 pt-4">
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => {
-            const val = e.target.value;
-            setTitle(val);
-            debouncedSave(val, editor?.getHTML() || "", isPinnedRef.current);
-          }}
-          placeholder="Untitled"
-          className="text-4xl font-extrabold bg-transparent text-white outline-none w-full placeholder-zinc-700 tracking-tight"
-        />
-        <p className="mt-1.5 text-xs text-zinc-500">
-          {wordCount} {wordCount === 1 ? "word" : "words"} · {readTime}{" "}
-          {readTime === 1 ? "min" : "min"} read
-        </p>
-      </div>
-
-      {/* Toolbar */}
-      {editor && (
-        <div className="mx-8 mt-4 border-y border-zinc-800/80 py-2 flex items-center gap-1 text-zinc-400 text-xs select-none">
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
-            }
-            className={`px-2 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("heading", { level: 1 })
-                ? "bg-zinc-800 text-white"
-                : ""
-            }`}
-          >
-            H1
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
-            className={`px-2 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("heading", { level: 2 })
-                ? "bg-zinc-800 text-white"
-                : ""
-            }`}
-          >
-            H2
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 3 }).run()
-            }
-            className={`px-2 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("heading", { level: 3 })
-                ? "bg-zinc-800 text-white"
-                : ""
-            }`}
-          >
-            H3
-          </button>
-
-          <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("bold") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuBold size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("italic") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuItalic size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("underline") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuUnderline size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("strike") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuStrikethrough size={14} />
-          </button>
-
-          <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("bulletList") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuList size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("orderedList") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuListOrdered size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("codeBlock") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuCode size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={`p-1.5 rounded hover:bg-zinc-800 hover:text-white ${
-              editor.isActive("blockquote") ? "bg-zinc-800 text-white" : ""
-            }`}
-          >
-            <LuQuote size={14} />
-          </button>
-
-          <div className="w-[1px] h-4 bg-zinc-800 mx-1" />
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().undo().run()}
-            className="p-1.5 rounded hover:bg-zinc-800 hover:text-white"
-          >
-            <LuUndo size={14} />
-          </button>
-
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => editor.chain().focus().redo().run()}
-            className="p-1.5 rounded hover:bg-zinc-800 hover:text-white"
-          >
-            <LuRedo size={14} />
-          </button>
-        </div>
-      )}
-
-      {/* Editor Canvas */}
-      <div
-        className="flex-1 px-8 py-6 overflow-y-auto cursor-text"
-        onClick={() => editor?.chain().focus().run()}
-      >
-        <EditorContent editor={editor} />
       </div>
     </div>
   );

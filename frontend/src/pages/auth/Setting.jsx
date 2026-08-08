@@ -8,7 +8,7 @@ import {
   LuKeyRound,
   LuUserRound,
 } from "react-icons/lu";
-import { MdColorLens } from "react-icons/md";
+import { MdOutlineColorLens } from "react-icons/md";
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthProvider";
@@ -283,7 +283,7 @@ export default function Settings() {
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
               <span className="text-sm">
-                <MdColorLens size={20} />
+                <MdOutlineColorLens size={20} />
               </span>
             </div>
             <div>

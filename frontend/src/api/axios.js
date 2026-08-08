@@ -1,9 +1,11 @@
 import axios from "axios";
+import { data } from "react-router-dom";
 
 const API_AUTH = "http://localhost:6969/api/auth";
 const API_TAG = "http://localhost:6969/api/tags";
 const API_OTP = "http://localhost:6969/api/otp";
 const API_NOTE = "http://localhost:6969/api/notes";
+const API_FOLDER = "http://localhost:6969/api/folders";
 
 const getAuthHeader = (accessToken) => ({
   headers: { Authorization: `Bearer ${accessToken}` },
@@ -59,20 +61,38 @@ export const updateTag = async (id, data, accessToken) => {
   return res.data;
 };
 export const deleteTag = async (id, accessToken) => {
-  const res = await axios.delete(
-    `${API_TAG}/${id}`,
-    getAuthHeader(accessToken),
-  );
-  return res.data;
+  try {
+    const res = await axios.delete(
+      `${API_TAG}/${id}`,
+      getAuthHeader(accessToken),
+    );
+    return res.data;
+  } catch (err) {
+    const msg =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      "Failed to delete tag";
+    throw new Error(msg);
+  }
 };
 
 // Notes
-export const getNotes = async (accessToken) => {
-  const res = await axios.get(API_NOTE, getAuthHeader(accessToken));
+export const getNotes = async (accessToken, options = {}) => {
+  const params = {};
+  if (options.trash) params.trash = "true";
+  const res = await axios.get(API_NOTE, {
+    ...getAuthHeader(accessToken),
+    params,
+  });
   return res.data;
 };
-export const getNoteId = async (id, accessToken) => {
-  const res = await axios.get(`${API_NOTE}/${id}`, getAuthHeader(accessToken));
+export const getNoteId = async (id, accessToken, options = {}) => {
+  const params = {};
+  if (options.trash) params.trash = "true";
+  const res = await axios.get(`${API_NOTE}/${id}`, {
+    ...getAuthHeader(accessToken),
+    params,
+  });
   return res.data;
 };
 export const createNote = async (data, accessToken) => {
@@ -94,6 +114,22 @@ export const deleteNote = async (id, accessToken) => {
   );
   return res.data;
 };
+export const trashNote = deleteNote;
+export const restoreNote = async (id, accessToken) => {
+  const res = await axios.patch(
+    `${API_NOTE}/${id}/restore`,
+    {},
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const permanentDeleteNote = async (id, accessToken) => {
+  const res = await axios.delete(
+    `${API_NOTE}/${id}/permanent`,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
 export const togglePin = async (id, isPinned, accessToken) => {
   const res = await axios.patch(
     `${API_NOTE}/${id}`,
@@ -101,4 +137,44 @@ export const togglePin = async (id, isPinned, accessToken) => {
     getAuthHeader(accessToken),
   );
   return res.data;
+};
+
+// FOLDER
+export const getFolders = async (accessToken) => {
+  const res = await axios.get(API_FOLDER, getAuthHeader(accessToken));
+  return res.data;
+};
+export const getFolderId = async (id, accessToken) => {
+  const res = await axios.get(
+    `${API_FOLDER}/${id}`,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const createFolder = async (data, accessToken) => {
+  const res = await axios.post(API_FOLDER, data, getAuthHeader(accessToken));
+  return res.data;
+};
+export const updateFolder = async (id, data, accessToken) => {
+  const res = await axios.patch(
+    `${API_FOLDER}/${id}`,
+    data,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const deleteFolder = async (id, mode, accessToken) => {
+  try {
+    const res = await axios.delete(`${API_FOLDER}/${id}`, {
+      ...getAuthHeader(accessToken),
+      data: { mode },
+    });
+    return res.data;
+  } catch (err) {
+    const msg =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      "Failed to delete folder";
+    throw new Error(msg);
+  }
 };
