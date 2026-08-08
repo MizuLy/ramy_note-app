@@ -6,6 +6,7 @@ const API_TAG = "http://localhost:6969/api/tags";
 const API_OTP = "http://localhost:6969/api/otp";
 const API_NOTE = "http://localhost:6969/api/notes";
 const API_FOLDER = "http://localhost:6969/api/folders";
+const API_TODO = "http://localhost:6969/api/todos";
 
 const getAuthHeader = (accessToken) => ({
   headers: { Authorization: `Bearer ${accessToken}` },
@@ -177,4 +178,42 @@ export const deleteFolder = async (id, mode, accessToken) => {
       "Failed to delete folder";
     throw new Error(msg);
   }
+};
+
+// Todo
+// GET ALL TODOS
+export const getTodos = async (accessToken) => {
+  const res = await axios.get(API_TODO, getAuthHeader(accessToken));
+  return res.data;
+};
+export const createTodo = async (data, accessToken) => {
+  const res = await axios.post(
+    API_TODO,
+    data, // { title, dueDate }
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const updateTodo = async (id, data, accessToken) => {
+  const res = await axios.put(
+    `${API_TODO}/${id}`,
+    data, // { title, dueDate, isDone }
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const toggleTodoDone = async (id, accessToken) => {
+  const res = await axios.patch(
+    `${API_TODO}/${id}/toggle`,
+    {},
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const deleteTodo = async (id, accessToken) => {
+  const res = await axios.delete(
+    `${API_TODO}/${id}`,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
 };
