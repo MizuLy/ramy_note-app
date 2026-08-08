@@ -37,6 +37,10 @@ export const changeEmail = (data, accessToken) =>
   axios.patch(`${API_AUTH}/change-email`, data, getAuthHeader(accessToken));
 export const changePassword = (data, accessToken) =>
   axios.patch(`${API_AUTH}/change-password`, data, getAuthHeader(accessToken));
+export const changeAvatar = (formData, accessToken) =>
+  axios.patch(`${API_AUTH}/change-avatar`, formData, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 
 // OTP
 export const verifyOtp = (data) =>

@@ -1,8 +1,21 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../../context/AuthProvider";
-import { getNotes, createNote, restoreNote, permanentDeleteNote } from "../../../api/axios";
+import {
+  getNotes,
+  createNote,
+  restoreNote,
+  permanentDeleteNote,
+} from "../../../api/axios";
 import { IoSearch } from "react-icons/io5";
-import { LuPin, LuChevronDown, LuFilter, LuRotateCcw, LuTrash2 } from "react-icons/lu";
+import {
+  LuPin,
+  LuChevronDown,
+  LuFilter,
+  LuRotateCcw,
+  LuTrash2,
+  LuPlus,
+} from "react-icons/lu";
+import toast from "react-hot-toast";
 
 // Helper function to convert raw HTML body into plain text preview
 const stripHtml = (html) => {
@@ -40,8 +53,7 @@ const formatRelativeTime = (dateInput) => {
   return date.toLocaleDateString();
 };
 
-// Time-range filter options, keyed by value, each returning whether a
-// given createdAt date falls within range.
+// Time-range filter options
 const TIME_FILTERS = {
   all: { label: "All time", matches: () => true },
   today: {
@@ -85,7 +97,7 @@ const TIME_FILTERS = {
 
 function NoteSkeleton() {
   return (
-    <div className="p-3.5 animate-pulse">
+    <div className="p-3.5 animate-pulse border-b border-zinc-800/50">
       <div className="flex items-center justify-between mb-2">
         <div className="h-3.5 bg-zinc-800 rounded w-1/2" />
       </div>
@@ -114,8 +126,6 @@ export default function NoteList({
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  // Forces a re-render every 30s so relative "Xm ago" labels keep
-  // advancing even without a fresh fetch.
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30000);
@@ -130,6 +140,7 @@ export default function NoteList({
       setNotes(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Failed to fetch notes:", err);
+      toast.error("Failed to load notes");
     } finally {
       setLoading(false);
     }
@@ -159,16 +170,16 @@ export default function NoteList({
         };
         setNotes((prev) => [noteWithFolder, ...prev]);
         onSelectNote(newId);
+        toast.success("New note created!");
       }
     } catch (err) {
       console.error("Failed to create note:", err);
+      toast.error("Failed to create note");
     } finally {
       setCreating(false);
     }
   };
 
-  // Filter notes by search term + created-at time range, AND sort
-  // pinned notes to the top
   const listTitle = isTrash
     ? "Trash"
     : folderId
@@ -196,11 +207,9 @@ export default function NoteList({
       return TIME_FILTERS[timeFilter].matches(created);
     })
     .sort((a, b) => {
-      // 1. Sort by Pinned status first
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
 
-      // 2. Fallback to newest updated/created date
       const dateA = new Date(a.updatedAt || a.createdAt || 0);
       const dateB = new Date(b.updatedAt || b.createdAt || 0);
       return dateB - dateA;
@@ -212,185 +221,178 @@ export default function NoteList({
     e.stopPropagation();
     try {
       await restoreNote(noteId, accessToken);
+      toast.success("Note restored successfully");
       onRefresh?.();
       fetchNotes();
     } catch (err) {
       console.error("Failed to restore note:", err);
+      toast.error("Failed to restore note");
     }
   };
 
   const handleDeleteForever = async (e, noteId) => {
     e.stopPropagation();
-    if (!window.confirm("Delete this note permanently? This cannot be undone.")) {
+    if (
+      !window.confirm("Delete this note permanently? This cannot be undone.")
+    ) {
       return;
     }
     try {
       await permanentDeleteNote(noteId, accessToken);
+      toast.success("Note permanently deleted");
       onRefresh?.();
       fetchNotes();
     } catch (err) {
       console.error("Failed to delete note:", err);
+      toast.error("Failed to delete note");
     }
   };
 
   return (
-    <div className="w-[300px] h-screen bg-zinc-900 border-r border-zinc-800 flex flex-col select-none">
+    <div className="w-80 h-screen border-r border-zinc-800 bg-zinc-950 flex flex-col select-none shrink-0">
       {/* Header */}
-      <div className="p-4 border-b border-zinc-800 space-y-2">
+      <div className="p-4 border-b border-zinc-800/80 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white truncate">
+          <h1 className="text-base font-bold text-white tracking-tight">
             {listTitle}
-          </h2>
+          </h1>
           {!isTrash && (
             <button
-              type="button"
               onClick={handleCreateNote}
               disabled={creating}
-              className="px-3 py-1 bg-zinc-100 text-zinc-900 text-xs font-semibold rounded hover:bg-zinc-300 disabled:opacity-50 transition-colors"
+              className="p-1.5 rounded-md bg-zinc-100 text-zinc-900 hover:bg-zinc-300 transition-colors disabled:opacity-50"
+              title="Create note"
             >
-              {creating ? "Creating..." : "+ New"}
+              <LuPlus size={14} />
             </button>
           )}
         </div>
 
-        {/* Search + filter toggle */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex items-center flex-1">
-            <IoSearch className="absolute left-3 text-zinc-400 text-sm pointer-events-none" />
+        {/* Search & Filter bar */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative flex-1">
+            <IoSearch
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500"
+            />
             <input
               type="text"
+              placeholder="Search notes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search notes..."
-              className="w-full bg-zinc-800 border border-zinc-700 text-xs text-white pl-9 pr-3 py-1.5 rounded-md outline-none focus:border-zinc-500"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 rounded-md text-zinc-200 placeholder-zinc-500 outline-none focus:border-zinc-700"
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowFilters((v) => !v)}
-            title="Filter by date"
-            className={`relative shrink-0 p-1.5 rounded-md border transition-colors ${
-              showFilters || isFilterActive
-                ? "bg-zinc-100 text-zinc-900 border-zinc-100"
-                : "text-zinc-400 border-zinc-700 hover:text-white hover:bg-zinc-800"
-            }`}
-          >
-            <LuFilter size={14} />
-            {isFilterActive && !showFilters && (
-              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-zinc-100 ring-2 ring-zinc-900" />
-            )}
-          </button>
-        </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-1.5 rounded-md border text-xs flex items-center gap-1 transition-colors ${
+                isFilterActive
+                  ? "bg-zinc-800 text-white border-zinc-700"
+                  : "bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white"
+              }`}
+            >
+              <LuFilter size={13} />
+            </button>
 
-        {/* Collapsible time filter */}
-        <div
-          className={`grid transition-all duration-200 ease-in-out ${
-            showFilters
-              ? "grid-rows-[1fr] opacity-100"
-              : "grid-rows-[0fr] opacity-0"
-          }`}
-        >
-          <div className="overflow-hidden">
-            <div className="relative flex items-center pt-1">
-              <select
-                value={timeFilter}
-                onChange={(e) => setTimeFilter(e.target.value)}
-                className="w-full appearance-none bg-zinc-800 border border-zinc-700 text-xs text-zinc-300 pl-3 pr-8 py-1.5 rounded-md outline-none focus:border-zinc-500 cursor-pointer"
-              >
-                {Object.entries(TIME_FILTERS).map(([value, { label }]) => (
-                  <option key={value} value={value}>
+            {showFilters && (
+              <div className="absolute right-0 mt-2 w-36 bg-zinc-900 border border-zinc-800 rounded-md shadow-xl py-1 z-20">
+                {Object.entries(TIME_FILTERS).map(([key, { label }]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setTimeFilter(key);
+                      setShowFilters(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                      timeFilter === key
+                        ? "text-white bg-zinc-800 font-medium"
+                        : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                    }`}
+                  >
                     {label}
-                  </option>
+                  </button>
                 ))}
-              </select>
-              <LuChevronDown
-                size={13}
-                className="absolute right-2.5 text-zinc-500 pointer-events-none"
-              />
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Note Items List */}
-      <div className="flex-1 overflow-y-auto divide-y divide-zinc-800/50">
+      <div className="flex-1 overflow-y-auto divide-y divide-zinc-800/40">
         {loading ? (
           <>
             <NoteSkeleton />
             <NoteSkeleton />
             <NoteSkeleton />
-            <NoteSkeleton />
           </>
         ) : displayedNotes.length === 0 ? (
-          <p className="text-xs text-zinc-500 p-4 text-center">
-            No notes found
-          </p>
+          <div className="p-8 text-center text-zinc-500 text-xs">
+            No notes found.
+          </div>
         ) : (
           displayedNotes.map((note) => {
             const id = note.id || note._id;
             const isSelected = selectedNoteId === id;
             const plainText = stripHtml(note.body);
-            const wordCount = getWordCount(plainText);
-            const relativeTime = formatRelativeTime(
-              isTrash
-                ? note.deletedAt || note.updatedAt || note.createdAt
-                : note.updatedAt || note.createdAt,
+            const words = getWordCount(plainText);
+            const formattedDate = formatRelativeTime(
+              note.updatedAt || note.createdAt,
             );
 
             return (
-              <button
+              <div
                 key={id}
-                type="button"
                 onClick={() => onSelectNote(id)}
-                className={`w-full text-left p-3.5 transition-colors relative group ${
-                  isSelected ? "bg-zinc-800" : "hover:bg-zinc-800/40"
+                className={`p-3.5 cursor-pointer transition-colors relative group ${
+                  isSelected
+                    ? "bg-zinc-800/70 border-l-2 border-white"
+                    : "hover:bg-zinc-900/60"
                 }`}
               >
-                <div className="flex items-center justify-between mb-1 gap-2">
-                  <h3 className="text-sm font-medium text-zinc-100 truncate">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <h3 className="text-xs font-semibold text-zinc-200 truncate flex-1">
                     {note.title || "Untitled Note"}
                   </h3>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    {isTrash && (
-                      <>
-                        <button
-                          type="button"
-                          title="Restore"
-                          onClick={(e) => handleRestore(e, id)}
-                          className="p-1 rounded text-zinc-400 hover:text-emerald-400 hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <LuRotateCcw size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          title="Delete forever"
-                          onClick={(e) => handleDeleteForever(e, id)}
-                          className="p-1 rounded text-zinc-400 hover:text-red-400 hover:bg-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <LuTrash2 size={13} />
-                        </button>
-                      </>
-                    )}
-                    {note.isPinned && !isTrash && (
-                      <LuPin
-                        size={13}
-                        className="text-zinc-400 rotate-45 shrink-0"
-                      />
-                    )}
-                  </div>
+                  {note.isPinned && (
+                    <LuPin
+                      size={12}
+                      className="text-zinc-400 rotate-45 shrink-0"
+                    />
+                  )}
                 </div>
 
-                <p className="text-xs text-zinc-500 truncate mb-1">
-                  {plainText || "No content"}
+                <p className="text-[11px] text-zinc-400 line-clamp-2 mb-2 leading-relaxed">
+                  {plainText || "Empty note..."}
                 </p>
 
-                <p className="text-[11px] text-zinc-600 truncate">
-                  {wordCount} {wordCount === 1 ? "word" : "words"}
-                  {relativeTime ? ` · ${relativeTime}` : ""}
-                </p>
-              </button>
+                <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                  <span>
+                    {formattedDate} · {words} {words === 1 ? "word" : "words"}
+                  </span>
+
+                  {isTrash && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => handleRestore(e, id)}
+                        className="p-1 hover:text-green-400 transition-colors"
+                        title="Restore"
+                      >
+                        <LuRotateCcw size={12} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteForever(e, id)}
+                        className="p-1 hover:text-red-400 transition-colors"
+                        title="Delete permanently"
+                      >
+                        <LuTrash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
             );
           })
         )}

@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
 import { refresh } from "../api/axios";
 
 const AuthContext = createContext(null);
@@ -14,7 +13,18 @@ export const AuthProvider = ({ children }) => {
       try {
         const res = await refresh();
         setAccessToken(res.data.accessToken);
-        setUser(res.data.user);
+
+        const userData = res.data.user;
+
+        // Normalize avatar / image key so refreshes never lose the Cloudinary URL
+        if (userData) {
+          const avatarUrl = userData.image || userData.avatar;
+          setUser({
+            ...userData,
+            avatar: avatarUrl,
+            image: avatarUrl,
+          });
+        }
       } catch (err) {
         setAccessToken(null);
         setUser(null);

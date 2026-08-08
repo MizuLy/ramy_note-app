@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LuSun,
   LuMoon,
@@ -7,61 +7,125 @@ import {
   LuTrash2,
   LuKeyRound,
   LuUserRound,
+  LuUpload,
+  LuLoader,
 } from "react-icons/lu";
 import { MdOutlineColorLens } from "react-icons/md";
-
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthProvider";
 import { useTheme } from "../../context/ThemeProvider";
 import {
   changeName,
   changeEmail,
   changePassword,
+  changeAvatar,
   logout,
 } from "../../api/axios";
-import { useEffect } from "react";
 
 export default function Settings() {
   const { user, setUser, setAccessToken, accessToken } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
+  // Avatar States
+  const [avatarPreview, setAvatarPreview] = useState(
+    user?.image || user?.avatar || "",
+  );
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  // Form States
   const [name, setName] = useState(user?.name || "");
-  const [nameStatus, setNameStatus] = useState("");
   const [nameSaving, setNameSaving] = useState(false);
 
   const [email, setEmail] = useState(user?.email || "");
   const [emailPassword, setEmailPassword] = useState("");
-  const [emailStatus, setEmailStatus] = useState("");
   const [emailSaving, setEmailSaving] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordStatus, setPasswordStatus] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     document.title = "Settings | Ramy";
-  });
+  }, []);
 
+  // Sync avatar preview if global user state updates
+  useEffect(() => {
+    if (user?.image || user?.avatar) {
+      setAvatarPreview(user.image || user.avatar);
+    }
+  }, [user]);
+
+  // 📸 Avatar Handler with Toast
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be smaller than 2MB");
+      return;
+    }
+
+    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarUploading(true);
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const uploadPromise = async () => {
+      const res = await changeAvatar(formData, accessToken);
+
+      const newImageUrl =
+        res?.data?.data?.image ||
+        res?.data?.image ||
+        res?.data?.user?.image ||
+        res?.data?.user?.avatar;
+
+      if (!newImageUrl) {
+        throw new Error("No image URL returned from server");
+      }
+
+      const freshUrl = `${newImageUrl}?t=${Date.now()}`;
+      setAvatarPreview(freshUrl);
+      setUser((prev) => ({
+        ...prev,
+        image: newImageUrl,
+        avatar: newImageUrl,
+      }));
+
+      return "Avatar updated successfully!";
+    };
+
+    toast
+      .promise(uploadPromise(), {
+        loading: "Uploading avatar...",
+        success: (msg) => msg,
+        error: (err) =>
+          err?.response?.data?.error ||
+          err?.message ||
+          "Failed to update avatar",
+      })
+      .finally(() => setAvatarUploading(false));
+  };
+
+  // 👤 Save Name Handler
   const handleSaveName = async () => {
     setNameSaving(true);
-    setNameStatus("");
     try {
       await changeName({ name }, accessToken);
       setUser((prev) => ({ ...prev, name }));
-      setNameStatus("Saved");
+      toast.success("Display name updated!");
     } catch (err) {
-      setNameStatus(err.response?.data?.error || "Failed to update name");
+      toast.error(err.response?.data?.error || "Failed to update name");
     } finally {
       setNameSaving(false);
     }
   };
 
+  // ✉️ Change Email Handler
   const handleChangeEmail = async () => {
-    setEmailStatus("");
     setEmailSaving(true);
     try {
       await changeEmail(
@@ -69,43 +133,41 @@ export default function Settings() {
         accessToken,
       );
       setUser((prev) => ({ ...prev, email }));
-      setEmailStatus("Email updated");
+      toast.success("Email updated successfully!");
       setEmailPassword("");
     } catch (err) {
-      setEmailStatus(err.response?.data?.error || "Failed to update email");
+      toast.error(err.response?.data?.error || "Failed to update email");
     } finally {
       setEmailSaving(false);
     }
   };
 
+  // 🔑 Change Password Handler
   const handleChangePassword = async () => {
-    setPasswordError("");
-    setPasswordStatus("");
-
     if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords don't match");
+      toast.error("New passwords do not match!");
       return;
     }
 
     setPasswordSaving(true);
     try {
       await changePassword({ currentPassword, newPassword }, accessToken);
-      setPasswordStatus("Password updated");
+      toast.success("Password updated successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setPasswordError(
-        err.response?.data?.error || "Failed to update password",
-      );
+      toast.error(err.response?.data?.error || "Failed to update password");
     } finally {
       setPasswordSaving(false);
     }
   };
 
+  // 🚪 Logout Handler
   const handleLogout = async () => {
     try {
       await logout();
+      toast.success("Logged out");
     } catch (err) {
       console.error("Logout failed:", err.message);
     } finally {
@@ -131,17 +193,55 @@ export default function Settings() {
           </p>
         </div>
 
+        {/* Profile Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <div className="flex items-center gap-3 mb-5">
+          <div className="flex items-center gap-3 mb-6">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
-              <span className="text-sm">
-                <LuUserRound size={20} />
-              </span>
+              <LuUserRound size={20} />
             </div>
             <div>
               <h2 className="text-sm font-semibold">Profile</h2>
               <p className="text-xs text-zinc-500">
                 How you appear in the app.
+              </p>
+            </div>
+          </div>
+
+          {/* Avatar Upload Area */}
+          <div className="flex items-center gap-4 pb-6 mb-6 border-b border-zinc-800">
+            <div className="relative group w-16 h-16 rounded-full overflow-hidden border border-zinc-700 bg-zinc-800 flex items-center justify-center shrink-0">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={user?.name || "User Avatar"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-lg font-semibold text-zinc-300">
+                  {user?.name?.[0]?.toUpperCase() || "U"}
+                </span>
+              )}
+
+              <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                {avatarUploading ? (
+                  <LuLoader size={18} className="animate-spin text-white" />
+                ) : (
+                  <LuUpload size={18} className="text-white" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  disabled={avatarUploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium">Profile Picture</p>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Click photo to update (JPG, PNG, max 2MB).
               </p>
             </div>
           </div>
@@ -166,9 +266,6 @@ export default function Settings() {
                   {nameSaving ? "..." : "Save"}
                 </button>
               </div>
-              {nameStatus && (
-                <p className="text-xs text-zinc-400 mt-1.5">{nameStatus}</p>
-              )}
             </div>
 
             <div>
@@ -205,19 +302,15 @@ export default function Settings() {
                   {emailSaving ? "Saving..." : "Update email"}
                 </button>
               </div>
-              {emailStatus && (
-                <p className="text-xs text-zinc-400 mt-1.5">{emailStatus}</p>
-              )}
             </div>
           )}
         </div>
 
+        {/* Security Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
-              <span className="text-sm">
-                <LuKeyRound size={20} />
-              </span>
+              <LuKeyRound size={20} />
             </div>
             <div>
               <h2 className="text-sm font-semibold">Security</h2>
@@ -263,13 +356,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {passwordError && (
-            <p className="text-xs text-red-400 mt-3">{passwordError}</p>
-          )}
-          {passwordStatus && (
-            <p className="text-xs text-green-400 mt-3">{passwordStatus}</p>
-          )}
-
           <button
             onClick={handleChangePassword}
             disabled={passwordSaving || !currentPassword || !newPassword}
@@ -279,12 +365,11 @@ export default function Settings() {
           </button>
         </div>
 
+        {/* Appearance Card */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
-              <span className="text-sm">
-                <MdOutlineColorLens size={20} />
-              </span>
+              <MdOutlineColorLens size={20} />
             </div>
             <div>
               <h2 className="text-sm font-semibold">Appearance</h2>
@@ -301,7 +386,10 @@ export default function Settings() {
             {themeOptions.map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
-                onClick={() => setTheme(value)}
+                onClick={() => {
+                  setTheme(value);
+                  toast.success(`Theme set to ${label}`);
+                }}
                 className={`relative flex flex-col items-center gap-2 py-5 rounded-lg border transition-colors ${
                   theme === value
                     ? "border-zinc-400 bg-zinc-800"
@@ -320,6 +408,7 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Account Card */}
         <div className="bg-zinc-900 border border-red-900/40 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-red-950/40 flex items-center justify-center shrink-0">

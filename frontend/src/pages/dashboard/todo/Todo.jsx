@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "../../../context/AuthProvider";
 import {
   getTodos,
@@ -38,6 +39,7 @@ export default function Todo() {
       setTodos(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Failed to fetch todos:", err);
+      toast.error("Failed to load tasks");
     } finally {
       setLoading(false);
     }
@@ -68,10 +70,12 @@ export default function Todo() {
         await fetchTodoList();
       }
 
+      toast.success("Task added successfully!");
       setTitle("");
       setDueDate("");
     } catch (err) {
       console.error("Failed to create todo:", err);
+      toast.error(err.response?.data?.message || "Failed to add task");
     } finally {
       setSubmitting(false);
     }
@@ -80,17 +84,26 @@ export default function Todo() {
   // Toggle isDone
   const handleToggleDone = async (id) => {
     // Optimistic UI update
+    const currentTodo = todos.find((t) => (t.id || t._id) === id);
+    const nextState = !currentTodo?.isDone;
+
     setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t)),
+      prev.map((t) =>
+        (t.id || t._id) === id ? { ...t, isDone: nextState } : t,
+      ),
     );
 
     try {
       await toggleTodoDone(id, accessToken);
+      toast.success(nextState ? "Task completed!" : "Task marked active");
     } catch (err) {
       console.error("Failed to toggle todo:", err);
+      toast.error("Failed to update status");
       // Revert if API fails
       setTodos((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, isDone: !t.isDone } : t)),
+        prev.map((t) =>
+          (t.id || t._id) === id ? { ...t, isDone: !nextState } : t,
+        ),
       );
     }
   };
@@ -99,12 +112,14 @@ export default function Todo() {
   const handleDeleteTodo = async (id) => {
     // Optimistic UI update
     const previousTodos = [...todos];
-    setTodos((prev) => prev.filter((t) => t.id !== id));
+    setTodos((prev) => prev.filter((t) => (t.id || t._id) !== id));
 
     try {
       await deleteTodo(id, accessToken);
+      toast.success("Task deleted");
     } catch (err) {
       console.error("Failed to delete todo:", err);
+      toast.error("Failed to delete task");
       setTodos(previousTodos);
     }
   };

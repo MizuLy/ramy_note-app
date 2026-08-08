@@ -10,6 +10,7 @@ import {
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import toast from "react-hot-toast";
 
 import {
   LuPin,
@@ -88,7 +89,7 @@ export default function NoteEditor({
   const [folderId, setFolderId] = useState("");
 
   const [availableTags, setAvailableTags] = useState([]);
-  const [selectedTags, setSelectedTags] = useState([]); // Stores tag objects/names
+  const [selectedTags, setSelectedTags] = useState([]);
 
   const activeNoteIdRef = useRef(noteId);
   const titleRef = useRef(title);
@@ -150,6 +151,7 @@ export default function NoteEditor({
     newBody,
     newPinned,
     tagsList,
+    isManual = false,
   ) => {
     if (!targetId) return;
 
@@ -165,8 +167,13 @@ export default function NoteEditor({
       );
       setLastSavedAt(new Date());
       onNoteUpdated?.();
+
+      if (isManual) {
+        toast.success("Note saved successfully!");
+      }
     } catch (err) {
       console.error("Save failed:", err);
+      toast.error(err?.response?.data?.error || "Failed to save note");
     } finally {
       setSaving(false);
     }
@@ -177,7 +184,7 @@ export default function NoteEditor({
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     saveTimeoutRef.current = setTimeout(() => {
-      performSave(targetId, newTitle, newBody, newPinned, tagsList);
+      performSave(targetId, newTitle, newBody, newPinned, tagsList, false);
     }, 800);
   };
 
@@ -189,6 +196,7 @@ export default function NoteEditor({
       editor?.getHTML() || "",
       isPinned,
       selectedTags,
+      true,
     );
   };
 
@@ -202,8 +210,10 @@ export default function NoteEditor({
       await updateNote(targetId, { folderId: newFolderId }, accessToken);
       setLastSavedAt(new Date());
       onNoteUpdated?.();
+      toast.success("Moved to folder");
     } catch (err) {
       console.error("Failed to change folder:", err);
+      toast.error("Failed to move note to folder");
     }
   };
 
@@ -224,6 +234,7 @@ export default function NoteEditor({
       const updated = [...selectedTags, foundTag];
       setSelectedTags(updated);
       debouncedSave(title, editor?.getHTML() || "", isPinned, updated);
+      toast.success("Tag added");
     }
     e.target.value = "";
   };
@@ -241,6 +252,7 @@ export default function NoteEditor({
     });
     setSelectedTags(updated);
     debouncedSave(title, editor?.getHTML() || "", isPinned, updated);
+    toast.success("Tag removed");
   };
 
   // Tiptap Setup
@@ -326,6 +338,7 @@ export default function NoteEditor({
         }
       } catch (err) {
         console.error("Failed to load note:", err);
+        toast.error("Failed to load note details");
       }
     };
 
@@ -362,9 +375,11 @@ export default function NoteEditor({
         }
         await onNoteUpdated?.();
         onSelectNote?.(newId);
+        toast.success("Created new note");
       }
     } catch (err) {
       console.error("Failed to create note:", err);
+      toast.error("Failed to create new note");
     } finally {
       setCreating(false);
     }
@@ -379,9 +394,11 @@ export default function NoteEditor({
     try {
       await updateNote(noteId, { isPinned: nextPinnedState }, accessToken);
       onNoteUpdated?.();
+      toast.success(nextPinnedState ? "Note pinned to top" : "Note unpinned");
     } catch (err) {
       console.error("Failed to toggle pin state:", err);
       setIsPinned(!nextPinnedState);
+      toast.error("Failed to update pin state");
     }
   };
 
@@ -518,9 +535,8 @@ export default function NoteEditor({
           </p>
         </div>
 
-        {/* METADATA SECTION (Created By, Last Modified, Tags) */}
+        {/* METADATA SECTION */}
         <div className="px-4 pt-4 pb-2 space-y-2.5 text-xs text-zinc-400">
-          {/* Created by */}
           <div className="flex items-center gap-4">
             <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
               <LuUser size={13} /> Created by
@@ -530,7 +546,6 @@ export default function NoteEditor({
             </div>
           </div>
 
-          {/* Last Modified */}
           <div className="flex items-center gap-4">
             <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
               <LuCalendar size={13} /> Last Modified
@@ -540,13 +555,11 @@ export default function NoteEditor({
             </span>
           </div>
 
-          {/* Tags Multi-select */}
           <div className="flex items-start gap-4">
             <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 pt-1">
               <LuTag size={13} /> Tags
             </span>
             <div className="flex-1 flex flex-wrap items-center gap-1.5">
-              {/* Active Badges */}
               {selectedTags.map((tagObj, idx) => {
                 const label =
                   typeof tagObj === "string"
@@ -571,7 +584,6 @@ export default function NoteEditor({
                 );
               })}
 
-              {/* Tag Picker Dropdown */}
               <div className="relative inline-flex items-center">
                 <select
                   defaultValue=""

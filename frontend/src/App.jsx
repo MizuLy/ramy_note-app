@@ -13,43 +13,72 @@ import VerifyOTP from "./pages/auth/VerifyOTP";
 import Settings from "./pages/auth/Setting";
 import Todo from "./pages/dashboard/todo/Todo";
 import Journal from "./pages/dashboard/journal/Journal";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/verify-otp" element={<VerifyOTP />} />
-      </Route>
+    <>
+      {/* Toast Notification Container */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "#18181b", // zinc-900
+            color: "#fff",
+            border: "1px solid #27272a", // zinc-800
+            fontSize: "13px",
+            borderRadius: "8px",
+          },
+          success: {
+            iconTheme: {
+              primary: "#22c55e", // green-500
+              secondary: "#18181b",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444", // red-500
+              secondary: "#18181b",
+            },
+          },
+        }}
+      />
 
-      <Route
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/folders/:folderId/:noteId?" element={<Note />} />
-        <Route path="/tags/:tagId/:noteId?" element={<Note />} />
-        <Route path="/trash/:id?" element={<Note />} />
-        <Route path="/notes/:id?" element={<Note />} />
-        <Route path="/todos" element={<Todo />} />
-        <Route path="/journals" element={<Journal />} />
-        <Route path="/settings" element={<Settings />} />
-      </Route>
+      <Routes>
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-otp" element={<VerifyOTP />} />
+        </Route>
 
-      <Route
-        path="/admin"
-        element={
-          <AdminRoute>
-            <AdminLayout />
-          </AdminRoute>
-        }
-      >
-        <Route path="/admin" element={<AdminDashboard />} />
-      </Route>
-    </Routes>
+        <Route
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/folders/:folderId/:noteId?" element={<Note />} />
+          <Route path="/tags/:tagId/:noteId?" element={<Note />} />
+          <Route path="/trash/:id?" element={<Note />} />
+          <Route path="/notes/:id?" element={<Note />} />
+          <Route path="/todos" element={<Todo />} />
+          <Route path="/journals" element={<Journal />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+      </Routes>
+    </>
   );
 }

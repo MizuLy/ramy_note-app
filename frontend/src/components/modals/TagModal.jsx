@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { IoClose } from "react-icons/io5";
 import { createTag, updateTag } from "../../api/axios";
 import { useAuth } from "../../context/AuthProvider";
@@ -82,98 +83,98 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
       if (isEditing) {
         await updateTag(tagId, { tag: tagName.trim() }, accessToken);
         setTagColor(tagId, selectedColor);
+
+        toast.success("Tag updated!");
+        onTagChanged?.();
       } else {
         const res = await createTag({ tag: tagName.trim() }, accessToken);
-        const created = res?.data || res?.result || res;
+        const created = res?.data?.result || res?.result || res?.data || res;
         const id = created?.id || created?._id;
+
         if (id) setTagColor(id, selectedColor);
+
+        toast.success("Tag created!");
+        onTagChanged?.(created);
       }
 
       setTagName("");
       setSelectedColor(COLOR_PRESETS[0]);
-      onTagChanged?.();
       onClose();
     } catch (err) {
-      setError(
+      const errorMsg =
         err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Something went wrong",
-      );
+        err.response?.data?.message ||
+        "Something went wrong";
+
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    /* Backdrop fade transition */
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-200 ease-out ${
-        isAnimating ? "opacity-100" : "opacity-0"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
+        isAnimating ? "bg-black/60 opacity-100" : "bg-black/0 opacity-0"
       }`}
       onClick={onClose}
     >
-      {/* Modal content box scale/fade transition */}
       <div
-        className={`w-full max-w-md bg-zinc-900 text-zinc-100 rounded-xl border border-zinc-800 p-6 shadow-xl transform transition-all duration-200 ease-out ${
-          isAnimating
-            ? "opacity-100 scale-100 translate-y-0"
-            : "opacity-0 scale-95 translate-y-2"
+        className={`w-full max-w-md rounded-2xl bg-neutral-900 p-6 text-white shadow-2xl transition-all duration-200 border border-neutral-800 ${
+          isAnimating ? "scale-100 opacity-100" : "scale-95 opacity-0"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
-          <h2 className="text-base font-semibold">
-            {isEditing ? "Edit Tag" : "New Tag"}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">
+            {isEditing ? "Edit Tag" : "Create Tag"}
           </h2>
           <button
-            type="button"
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="text-neutral-400 hover:text-white transition-colors"
           >
-            <IoClose size={18} />
+            ✕
           </button>
         </div>
 
         {error && (
-          <p className="mt-3 text-xs text-red-400 bg-red-500/10 p-2 rounded border border-red-500/20">
+          <div className="mb-4 rounded-lg bg-red-500/10 p-3 text-sm text-red-400 border border-red-500/20">
             {error}
-          </p>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+            <label className="block text-xs font-medium text-neutral-400 mb-1">
               Tag Name
             </label>
             <input
               type="text"
-              placeholder="e.g. Work"
               value={tagName}
               onChange={(e) => setTagName(e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 transition-colors"
+              placeholder="e.g. Design, React..."
+              className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
               autoFocus
-              required
-              disabled={loading}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">
-              Color Tag
+            <label className="block text-xs font-medium text-neutral-400 mb-2">
+              Color Accent
             </label>
-            <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-2">
               {COLOR_PRESETS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => setSelectedColor(color)}
-                  style={{ backgroundColor: color }}
-                  className={`w-7 h-7 rounded-full transition-all ${
+                  className={`h-6 w-6 rounded-full transition-transform ${
                     selectedColor === color
-                      ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900 scale-110"
-                      : "opacity-80 hover:opacity-100"
+                      ? "ring-2 ring-white ring-offset-2 ring-offset-neutral-900 scale-110"
+                      : "hover:scale-105 opacity-80"
                   }`}
-                  disabled={loading}
+                  style={{ backgroundColor: color }}
                 />
               ))}
             </div>
@@ -183,23 +184,16 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white transition-colors"
-              disabled={loading}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50"
+              disabled={loading || !tagName.trim()}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200 transition-colors disabled:opacity-50"
             >
-              {loading
-                ? isEditing
-                  ? "Saving..."
-                  : "Creating..."
-                : isEditing
-                  ? "Save Changes"
-                  : "Save Tag"}
+              {loading ? "Saving..." : isEditing ? "Update Tag" : "Create Tag"}
             </button>
           </div>
         </form>

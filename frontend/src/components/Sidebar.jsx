@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { SlOptions } from "react-icons/sl";
 import { IoSearch } from "react-icons/io5";
 import { PiNotebookLight } from "react-icons/pi";
 import { RiShieldUserLine } from "react-icons/ri";
@@ -22,7 +21,7 @@ import { getFolderColor, getTagColor } from "../utils/localColors";
 // Modals
 import FolderModal from "../components/modals/FolderModal";
 import DeleteFolderModal from "../components/modals/DeleteFolderModal";
-import TagModal from "../components/modals/TagModal"; // 1. Import TagModal
+import TagModal from "../components/modals/TagModal";
 
 // API
 import { getFolders, deleteFolder, getTags, deleteTag } from "../api/axios";
@@ -43,7 +42,7 @@ export default function Sidebar() {
   });
 
   // Tag States
-  const [isTagModalOpen, setIsTagModalOpen] = useState(false); // 2. Tag modal state
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState(null);
   const [tags, setTags] = useState([]);
   const [isTagsOpen, setIsTagsOpen] = useState(() => {
@@ -51,12 +50,12 @@ export default function Sidebar() {
     return saved !== null ? saved === "true" : true;
   });
 
-  // Context Menu State (Shared for Folder / Tag)
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, item, type: 'folder' | 'tag' }
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState(null);
 
-  const { user, mode, accessToken } = useAuth();
+  const { user, accessToken } = useAuth();
 
-  // --- Toggles ---
+  // Toggles
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -81,7 +80,7 @@ export default function Sidebar() {
     });
   };
 
-  // --- Fetch Operations ---
+  // Fetch Operations
   const fetchFolders = async () => {
     if (!accessToken) return;
     try {
@@ -109,7 +108,6 @@ export default function Sidebar() {
     fetchTagsList();
   }, [accessToken]);
 
-  // Close context menu on window events
   useEffect(() => {
     if (!contextMenu) return;
     const closeMenu = () => setContextMenu(null);
@@ -123,7 +121,7 @@ export default function Sidebar() {
     };
   }, [contextMenu]);
 
-  // --- Folder Handlers ---
+  // Handlers
   const handleOpenCreateFolderModal = () => {
     setEditingFolder(null);
     setIsFolderModalOpen(true);
@@ -147,7 +145,6 @@ export default function Sidebar() {
     }
   };
 
-  // --- Tag Handlers ---
   const handleOpenCreateTagModal = () => {
     setEditingTag(null);
     setIsTagModalOpen(true);
@@ -168,7 +165,6 @@ export default function Sidebar() {
     }
   };
 
-  // --- Context Menu Handlers ---
   const handleContextMenu = (e, item, type) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, item, type });
@@ -192,7 +188,6 @@ export default function Sidebar() {
     setContextMenu(null);
   };
 
-  // Dynamic CSS classes
   const getLinkClass = ({ isActive }) =>
     `flex items-center gap-3 py-2 rounded-md transition-colors duration-200 cursor-pointer ${
       collapsed ? "justify-center px-0" : "px-3"
@@ -402,7 +397,6 @@ export default function Sidebar() {
                 <ul className="mt-2 space-y-1">
                   {tags.map((t) => {
                     const id = t.id || t._id;
-                    // Resolve the tag display name across common key variations
                     const label =
                       t.tag || t.tagName || t.name || "Untitled Tag";
 
@@ -448,7 +442,7 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* User Footer */}
+        {/* User Footer with Dynamic Avatar */}
         <div className="p-3 border-t border-zinc-700">
           <Link
             to="/settings"
@@ -457,8 +451,16 @@ export default function Sidebar() {
             }`}
             title="Settings"
           >
-            <div className="w-8 h-8 rounded-full bg-zinc-400 text-zinc-900 flex items-center justify-center text-xs font-semibold shrink-0">
-              {user?.name?.[0]?.toUpperCase() || "U"}
+            <div className="w-8 h-8 rounded-full bg-zinc-700 border border-zinc-600 text-zinc-200 flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden">
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user?.name || "User Avatar"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user?.name?.[0]?.toUpperCase() || "U"
+              )}
             </div>
 
             {!collapsed && (
@@ -471,17 +473,14 @@ export default function Sidebar() {
                     {user?.email || ""}
                   </p>
                 </div>
-                <LuSettings
-                  size={18}
-                  className="text-zinc-400 hover:animate-spin shrink-0"
-                />
+                <LuSettings size={18} className="text-zinc-400 shrink-0" />
               </>
             )}
           </Link>
         </div>
       </nav>
 
-      {/* Shared Context Menu for Folders & Tags */}
+      {/* Shared Context Menu */}
       {contextMenu && (
         <div
           className="fixed z-50 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg py-1 text-sm"
@@ -521,7 +520,7 @@ export default function Sidebar() {
         onConfirm={handleConfirmFolderDelete}
       />
 
-      {/* Tag Modal Integration */}
+      {/* Tag Modal */}
       <TagModal
         isOpen={isTagModalOpen}
         onClose={() => setIsTagModalOpen(false)}
