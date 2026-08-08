@@ -17,7 +17,7 @@ const refresh = async (req, res) => {
 
     const user = await prisma.users.findUnique({
       where: { id: decoded.id },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, image: true, role: true },
     });
 
     if (!user) return res.status(401).json({ error: "User no longer exists" });
