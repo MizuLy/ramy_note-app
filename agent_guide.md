@@ -2,13 +2,15 @@
 
 This guide helps AI agents (and new developers) understand the **Ramy Note App** codebase before making changes.
 
+> Quick overview, structure, and setup commands are in the repo **[README.md](./README.md)** — this guide covers the deep implementation details.
+
 ## 1. Project Overview
 
 A full-stack note-taking application ("RAM Shortage") with:
 
 - **Notes** — rich-text editing (TipTap), pinning, folders, tags, soft-delete trash, search, word count / read-time.
 - **To-dos** — simple task list with due dates and done-state toggling.
-- **Journals** — mood-based diary entries (backend complete, frontend is a stub).
+- **Journals** — mood-based diary entries with active/trash views, restore, and permanent delete (fully implemented).
 - **Auth** — register with email OTP verification, login, JWT access + refresh tokens, profile settings (name/email/password/avatar).
 - **Admin panel** — dashboard stats, list all users/notes, change roles, remove users.
 
@@ -58,7 +60,8 @@ CORS on the backend only allows `http://localhost:5173` with credentials — bot
 
 ```
 Ramy (Note-app)/
-├── agent_guide.md            # this file
+├── README.md                 # quick overview, structure, setup
+├── agent_guide.md            # this file (deep implementation details)
 ├── backend/
 │   ├── docker-compose.yml    # postgres + pgadmin
 │   ├── prisma/
@@ -78,9 +81,12 @@ Ramy (Note-app)/
     └── src/
         ├── main.jsx          # providers: BrowserRouter > AuthProvider > ThemeProvider
         ├── App.jsx           # all routes + toast config
+        ├── index.css         # Tailwind + zinc CSS variables
         ├── api/              # axios.js (feature APIs), admin.js
-        ├── components/       # Sidebar, modals/, ProtectedRoute, AdminRoute, etc.
+        ├── assets/           # ram.png
+        ├── components/       # Sidebar, modals/, ProtectedRoute, AdminRoute, AvatarUpload, RoleDropdown
         ├── context/          # AuthProvider, ThemeProvider
+        ├── error/            # NotFound.jsx
         ├── layouts/          # AuthLayout, DashboardLayout, AdminLayout
         ├── pages/            # auth/, dashboard/ (note/, todo/, journal/), admin/
         └── utils/            # localColors.js
@@ -124,7 +130,7 @@ The editor m2m on Notes (`editors`) exists in the schema and the note controller
 | `/folders` | GET list, POST, GET `/:id`, PATCH `/:id`, DELETE `/:id` | |
 | `/tags` | GET list, POST, PATCH `/:id`, DELETE `/:id` | |
 | `/todos` | GET list, POST, PATCH `/:id`, `/:id/toggle`, DELETE `/:id` | |
-| `/journals` | GET list, POST, GET `/:id`, PUT `/:id`, DELETE `/:id` | |
+| `/journals` | GET list, POST, GET `/:id`, PUT `/:id`, DELETE `/:id` (soft delete), `/:id/restore`, `/:id/permanent` | supports `?trash=true` |
 | `/admin/dashboard` | dashboard-stats, all-users, all-notes, change-user `/:id`/role, remove-user `/:id` | verifyToken + isAdmin |
 
 ### Key conventions in controllers
@@ -156,8 +162,9 @@ BrowserRouter > AuthProvider > ThemeProvider > App
 
 Routes in `App.jsx`:
 - **AuthLayout**: `/login`, `/register`, `/verify-otp`
-- **DashboardLayout** (wrapped in `ProtectedRoute`): `/` (welcome), `/notes/:id?`, `/folders/:folderId/:noteId?`, `/tags/:tagId/:noteId?`, `/trash/:id?` (renders the dedicated `Trash` page), `/todos`, `/journals`, `/settings`
+- **DashboardLayout** (wrapped in `ProtectedRoute`): `/` (welcome), `/notes/:id?`, `/folders/:folderId/:noteId?`, `/tags/:tagId/:noteId?`, `/trash/:id?` (renders the dedicated `Trash` page), `/todos`, `/journals`, `/journal`, `/journal/:id`, `/journal/trash`, `/journal/trash/:id`, `/settings`
 - **AdminLayout** (wrapped in `AdminRoute`): `/admin`
+- `*` → `NotFound.jsx`
 
 ### Contexts
 
@@ -175,14 +182,14 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
   - **Trash mode**: `NoteEditor` takes an `isTrash` prop — the toolbar hides pin / folder / new-note actions and instead offers Restore + Delete Forever (permanent delete is confirmed via `ConfirmModal`). Trash notes are fetched with `getNoteId(id, token, { trash: true })`.
   - Folder/tag filtering on the list is done **client-side** after fetching all notes (with `?trash=true` passed for the trash view).
 - **todo/** — `Todo.jsx` fully implemented (add, toggle, delete, filter tabs, optimistic UI with revert).
-- **journal/** — `Journal.jsx`, `JournalList.jsx`, `JournalEditor.jsx` are **placeholders** ("Journal" / "JournalEditor" text only). Backend endpoints exist; this feature is incomplete.
+- **journal/** — fully implemented. `Journal.jsx` (container: fetches active + trash lists via `Promise.all`, active/trash view toggle, create/edit/soft-delete/restore/permanent-delete handlers), `JournalEditor.jsx`, `JournalList.jsx` (search, edit, soft-delete), `JournalTrash.jsx` (restore + permanent delete). Trash journals are fetched with `getJournals(token, { trash: true })`.
 - **auth/** — Login (normalizes `image`/`avatar` on sign-in), Register, VerifyOTP, Setting (profile changes), Logout.
 - **admin/** — `AdminDashboard.jsx` uses `src/api/admin.js`.
 
 ### Components
 
 - `Sidebar.jsx` — collapsible nav (persisted in localStorage) with a Trash link, folders + tags sections with create/edit/delete modals and a right-click context menu. Folder/tag colors come from `utils/localColors.js` (localStorage map keyed by id). Admin link shown only when `user.role === "ADMIN"`.
-- `modals/` — `FolderModal`, `DeleteFolderModal` (mode: delete notes or keep them), `TagModal`, `SearchModal`, `ConfirmModal` (generic destructive-action confirm, replaces `window.confirm` for permanent note delete).
+- `modals/` — `FolderModal`, `DeleteFolderModal` (mode: delete notes or keep them), `TagModal`, `DeleteTagModal`, `SearchModal`, `ConfirmModal` (generic destructive-action confirm, replaces `window.confirm` for permanent note delete).
 - `ProtectedRoute.jsx` / `AdminRoute.jsx` — auth / role guards (redirect to login/admin home as appropriate).
 - `AvatarUpload.jsx`, `RoleDropdown.jsx` — used in settings / admin pages.
 
@@ -203,5 +210,5 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 - **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again.
 - **Soft delete**: notes use `isDeleted`/`deletedAt`; permanent delete requires the note to already be in the trash (`note.controller.js:289`).
 - **First registered user** becomes ADMIN automatically; guard rails in `admin.controller.js` prevent an admin from deleting their own account.
-- **Journals** have `isDeleted`/`deletedAt` in the schema, but the controller has no trash/restore endpoints yet.
+- **Journals** use the same soft-delete pattern as notes: `isDeleted`/`deletedAt`, `DELETE /:id` moves to trash, `PATCH /:id/restore` restores, `DELETE /:id/permanent` requires the journal to already be in the trash (`journal.controller.js:145`).
 - Do not add code comments unless the surrounding code already uses them sparingly (the codebase uses minimal comments).

@@ -16,6 +16,7 @@ import Todo from "./pages/dashboard/todo/Todo";
 import Journal from "./pages/dashboard/journal/Journal";
 import { Toaster } from "react-hot-toast";
 import NotFound from "./error/NotFound";
+import JournalTrash from "./pages/dashboard/journal/JournalTrash";
 
 export default function App() {
   return (
@@ -67,6 +68,10 @@ export default function App() {
           <Route path="/trash/:id?" element={<Trash />} />
           <Route path="/todos" element={<Todo />} />
           <Route path="/journals" element={<Journal />} />
+          <Route path="/journal" element={<Journal />} />
+          <Route path="/journal/:id" element={<Journal />} />
+          <Route path="/journal/trash" element={<JournalTrash />} />
+          <Route path="/journal/trash/:id" element={<JournalTrash />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
 

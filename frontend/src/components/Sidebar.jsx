@@ -352,7 +352,7 @@ export default function Sidebar() {
                             }}
                           />
                           {!collapsed && (
-                            <span className="truncate flex-1 text-zinc-400">
+                            <span className="truncate flex-1 text-zinc-400 text-xs">
                               {folder.name}
                             </span>
                           )}
@@ -425,7 +425,7 @@ export default function Sidebar() {
                             }}
                           />
                           {!collapsed && (
-                            <span className="truncate flex-1 text-zinc-400">
+                            <span className="truncate flex-1 text-zinc-400 text-xs">
                               {label}
                             </span>
                           )}
@@ -480,7 +480,10 @@ export default function Sidebar() {
                     {user?.email || ""}
                   </p>
                 </div>
-                <LuSettings size={18} className="text-zinc-400 shrink-0" />
+                <LuSettings
+                  size={18}
+                  className={`text-zinc-400 shrink-0 hover:rotate-90 duration-200 hover:text-white`}
+                />
               </>
             )}
           </Link>

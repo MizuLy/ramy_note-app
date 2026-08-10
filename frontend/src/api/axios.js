@@ -7,6 +7,7 @@ const API_OTP = "http://localhost:6969/api/otp";
 const API_NOTE = "http://localhost:6969/api/notes";
 const API_FOLDER = "http://localhost:6969/api/folders";
 const API_TODO = "http://localhost:6969/api/todos";
+const API_JOURNAL = "http://localhost:6969/api/journals";
 
 const getAuthHeader = (accessToken) => ({
   headers: { Authorization: `Bearer ${accessToken}` },
@@ -217,6 +218,64 @@ export const toggleTodoDone = async (id, accessToken) => {
 export const deleteTodo = async (id, accessToken) => {
   const res = await axios.delete(
     `${API_TODO}/${id}`,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+
+// Journal
+export const getJournals = async (accessToken, options = {}) => {
+  const params = {};
+  if (options.trash) params.trash = "true";
+  const res = await axios.get(API_JOURNAL, {
+    ...getAuthHeader(accessToken),
+    params,
+  });
+  return res.data;
+};
+
+export const getJournalById = async (id, accessToken) => {
+  const res = await axios.get(
+    `${API_JOURNAL}/${id}`,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+
+export const createJournal = async (data, accessToken) => {
+  const res = await axios.post(API_JOURNAL, data, getAuthHeader(accessToken));
+  return res.data;
+};
+
+export const updateJournal = async (id, data, accessToken) => {
+  const res = await axios.put(
+    `${API_JOURNAL}/${id}`,
+    data,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+
+export const deleteJournal = async (id, accessToken) => {
+  const res = await axios.delete(
+    `${API_JOURNAL}/${id}`,
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+
+export const restoreJournal = async (id, accessToken) => {
+  const res = await axios.patch(
+    `${API_JOURNAL}/${id}/restore`,
+    {},
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+
+export const permanentDeleteJournal = async (id, accessToken) => {
+  const res = await axios.delete(
+    `${API_JOURNAL}/${id}/permanent`,
     getAuthHeader(accessToken),
   );
   return res.data;
