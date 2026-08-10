@@ -15,43 +15,26 @@ A full-stack note-taking application ("RAM Shortage") with notes (rich-text, pin
 
 ```
 Ramy (Note-app)/
-├── agent_guide.md              # detailed agent/onboarding guide
 ├── README.md                   # this file
-├── backend/                    # Express REST API (CommonJS)
-│   ├── docker-compose.yml      # PostgreSQL 15 + pgAdmin
-│   ├── prisma.config.ts        # Prisma 6 config
-│   ├── prisma/
-│   │   ├── schema.prisma       # data model (Users, Notes, Todos, Journals, Tags, Folders, Otps)
-│   │   └── migrations/         # migration history
-│   ├── package.json            # "type": "commonjs", dev = nodemon src/server.js
+├── agent_guide.md              # deep agent/onboarding guide (full tree in §3)
+├── backend/                    # Express REST API (CommonJS) — Node + Express 5 + Prisma
+│   ├── prisma/                 # schema.prisma (data model) + migrations/
 │   └── src/
-│       ├── server.js           # app entry, middleware, mounts routers at /api
-│       ├── configs/            # db.js, cloudinary.js, upload.js (multer), otp.js
-│       ├── controllers/        # per-feature request handlers (auth, note, todo, ...)
+│       ├── server.js           # app entry, mounts routers at /api
+│       ├── configs/            # db, cloudinary, upload (multer), otp
+│       ├── controllers/        # per-feature request handlers
 │       ├── middlewares/        # verifyToken, isAdmin, rateLimiter
 │       ├── routes/             # Express routers (auth, otp, notes, folders, tags, todos, journals, admin)
 │       └── utils/              # generateToken.js, sendMail.js
-└── frontend/                   # React SPA (ESM)
-    ├── index.html
-    ├── vite.config.js
-    ├── tailwind.config.js      # custom zinc palette + fonts + daisyUI themes
-    ├── package.json            # dev = vite, lint = eslint .
+└── frontend/                   # React SPA (ESM) — React 19 + Vite + TipTap
     └── src/
-        ├── main.jsx            # BrowserRouter > AuthProvider > ThemeProvider
-        ├── App.jsx             # all routes + toast config
-        ├── index.css           # Tailwind + CSS variables (zinc palette)
-        ├── api/
-        │   ├── axios.js        # feature API wrappers (hardcoded http://localhost:6969)
-        │   └── admin.js        # admin endpoints
-        ├── assets/             # ram.png
+        ├── main.jsx / App.jsx  # providers + all routes
+        ├── api/                # axios.js (feature APIs), admin.js
         ├── components/         # Sidebar, modals/, ProtectedRoute, AdminRoute, AvatarUpload, RoleDropdown
         ├── context/            # AuthProvider, ThemeProvider
         ├── error/              # NotFound.jsx
         ├── layouts/            # AuthLayout, DashboardLayout, AdminLayout
-        ├── pages/
-        │   ├── auth/           # Login, Register, VerifyOTP, Setting, Logout
-        │   ├── dashboard/      # Dashboard, note/ (Note, Trash, NoteList, NoteEditor), todo/, journal/ (Journal, JournalEditor, JournalList, JournalTrash)
-        │   └── admin/          # AdminDashboard
+        ├── pages/              # auth/, dashboard/ (note/, todo/, journal/), admin/
         └── utils/              # localColors.js
 ```
 
@@ -79,8 +62,8 @@ Both apps must run together — backend CORS only allows `http://localhost:5173`
 ## Key Conventions
 
 - **API routes** are mounted under `/api`; responses vary per endpoint (`data`, `result`, `folder`, `journal`) — unwrap defensively (`res?.data || res?.result || res`).
-- **Auth**: access token (1d, Bearer) + httpOnly refresh token cookie (7d). Frontend refreshes only once at boot; no 401 auto-refresh.
-- **Notes & Journals**: body stores TipTap HTML (notes only); both use soft delete (`isDeleted`/`deletedAt`) with trash + restore + permanent-delete endpoints (`DELETE /:id` → trash, `/:id/restore`, `/:id/permanent`).
-- **Editor sharing** (`editors` m2m on Notes) exists in schema/controller but has no UI yet — do not remove it.
+- **Auth**: access token (15m, Bearer) + httpOnly refresh token cookie (7d). Frontend refreshes only once at boot.
+- **Notes & Journals** use soft delete (`isDeleted`/`deletedAt`) with trash + restore + permanent-delete endpoints.
 - **First registered user** automatically becomes `ADMIN`.
-- No TypeScript, no tests. Lint only on the frontend.
+
+> Full conventions, gotchas, and line-level details: **[agent_guide.md §7](./agent_guide.md#7-conventions--gotchas)**.

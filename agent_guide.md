@@ -21,32 +21,9 @@ Two separate apps live in a single repo:
 | `backend/` | Node.js + Express 5, Prisma ORM, PostgreSQL, JWT, Cloudinary, Nodemailer/Resend |
 | `frontend/` | React 19 + Vite 8, React Router 7, TipTap 3, Tailwind + daisyUI, Axios |
 
-## 2. Getting Started (Local Dev)
+## 2. Environment Variables (backend `.env`)
 
-Backend (default port **6969**):
-
-```bash
-cd backend
-docker compose up -d            # PostgreSQL 15 + pgAdmin (db: dev-db, user/pass: postgres/admin)
-cp .env.example .env            # fill in values (see "Environment Variables")
-npm install
-npx prisma migrate dev          # apply schema + generate client
-npm run dev                     # nodemon src/server.js
-```
-
-Frontend (default port **5173**):
-
-```bash
-cd frontend
-npm install
-npm run dev                     # vite
-npm run lint                    # eslint .   (run before finishing work)
-npm run build
-```
-
-CORS on the backend only allows `http://localhost:5173` with credentials — both apps must run for the UI to work.
-
-### Environment Variables (backend `.env`)
+Setup commands (docker compose, migrate, dev servers) are in **[README.md](./README.md)**. The backend `.env` file uses:
 
 - `DATABASE_URL` — Postgres connection string used by Prisma.
 - `DOCKER_URL` — commented-out alternative datasource URL (uncomment in `prisma/schema.prisma` to use).
@@ -54,7 +31,7 @@ CORS on the backend only allows `http://localhost:5173` with credentials — bot
 - `ACCESS_SECRET` / `REFRESH_SECRET` / `JWT_EXPIRES_IN` — JWT secrets and refresh lifetime (default `7d`).
 - `SMTP_USER` / `SMTP_PASS` — Gmail app password for Nodemailer (dev).
 - `RESEND_API_KEY` — used instead of Nodemailer when `NODE_ENV === "production"`.
-- Note: `configs/cloudinary.js` reads `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` even though they are not listed in `.env.example`.
+- `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` — Cloudinary credentials read by `configs/cloudinary.js` for avatar uploads (now listed in `.env.example`).
 
 ## 3. Repository Layout
 
@@ -118,7 +95,7 @@ The editor m2m on Notes (`editors`) exists in the schema and the note controller
 - `POST /api/otp/request` & `POST /api/otp/verify` → verify sets `isVerified: true`.
 - `POST /api/auth/login` → checks `isVerified`, returns `{ accessToken, data: {id, name, email, image, role} }` and sets an httpOnly `refreshToken` cookie (7d, `sameSite: strict`). The frontend `Login` page normalizes `image`/`avatar` before storing the user.
 - `POST /api/auth/refresh` → reads cookie, returns a new `accessToken` + user object. The frontend calls this on app mount to restore the session.
-- Access token expires in 1 day (`utils/generateToken.js`). There is currently **no automatic access-token refresh on 401 in the frontend**; `AuthProvider` only refreshes once at boot.
+- Access token expires in **15 minutes** (`utils/generateToken.js`). There is currently **no automatic access-token refresh on 401 in the frontend**; `AuthProvider` only refreshes once at boot.
 
 ### API routes (all mounted under `/api`)
 
@@ -143,7 +120,7 @@ The editor m2m on Notes (`editors`) exists in the schema and the note controller
 
 - `verifyToken.js` — Bearer or cookie token → `req.user`.
 - `isAdmin.js` — blocks non-ADMIN (`403`).
-- `rateLimiter.js` — `generalLimiter` (10k/15min, global), `authLimiter` (50/15min, login/register), `otpLimiter` (3/5min, OTP request).
+- `rateLimiter.js` — `generalLimiter` (10k/15min, global), `authLimiter` (5/15min, login/register), `otpLimiter` (3/5min, OTP request).
 
 ### Configs & utils
 
@@ -206,7 +183,7 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 - **Prisma 6**: config lives in `prisma.config.ts`; run `npx prisma migrate dev` after schema changes and regenerate the client.
 - **Response shapes differ per endpoint** — always unwrap defensively (`res?.data || res?.result || res`).
 - **API base URLs are hardcoded** to `http://localhost:6969` in `frontend/src/api/axios.js` and `frontend/src/api/admin.js`. There is no Vite proxy / env-based URL config.
-- **Note body is HTML** (TipTap). Never render note previews with `dangerouslySetInnerHTML` without sanitizing; previews strip HTML via DOMParser (`NoteList.jsx:21`).
+- **Note body is HTML** (TipTap). Never render note previews with `dangerouslySetInnerHTML` without sanitizing; previews strip HTML via DOMParser (`NoteList.jsx:25`).
 - **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again.
 - **Soft delete**: notes use `isDeleted`/`deletedAt`; permanent delete requires the note to already be in the trash (`note.controller.js:289`).
 - **First registered user** becomes ADMIN automatically; guard rails in `admin.controller.js` prevent an admin from deleting their own account.
