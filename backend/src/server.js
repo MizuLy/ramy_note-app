@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 6969;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://ramy-note-app.vercel.app"],
+    origin: [process.env.FRONTEND_URL, process.env.PRODUCTION_URL],
     credentials: true,
   }),
 );
