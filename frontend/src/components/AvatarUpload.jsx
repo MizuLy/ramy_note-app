@@ -24,17 +24,14 @@ export default function AvatarUpload({ currentAvatar, onUploadSuccess }) {
     try {
       const token = localStorage.getItem("token"); // Retrieve your auth token
 
-      const response = await fetch(
-        "http://localhost:6969/api/auth/change-avatar",
-        {
-          method: "PATCH",
-          headers: {
-            Authorization: token ? `Bearer ${token}` : "",
-            // DO NOT manually set Content-Type header here
-          },
-          body: formData,
+      const response = await fetch("VITE_API_URL/api/auth/change-avatar", {
+        method: "PATCH",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+          // DO NOT manually set Content-Type header here
         },
-      );
+        body: formData,
+      });
 
       const data = await response.json();
 

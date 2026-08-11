@@ -157,7 +157,7 @@ Routes in `App.jsx`:
 
 ### API layer (`src/api/axios.js`)
 
-Plain axios wrappers (not a shared instance). Every authed call passes `Authorization: Bearer <accessToken>` and `withCredentials: true` (needed for refresh cookie). Base URLs are hardcoded to `http://localhost:6969`. `forgotPassword`/`resetPassword` are the only auth helpers that don't attach the bearer header (they run pre-login).
+Plain axios wrappers (not a shared instance). Every authed call passes `Authorization: Bearer <accessToken>` and `withCredentials: true` (needed for refresh cookie). Base URLs are hardcoded to `VITE_API_URL`. `forgotPassword`/`resetPassword` are the only auth helpers that don't attach the bearer header (they run pre-login).
 
 ### Pages
 
@@ -189,7 +189,7 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 - **CommonJS backend** (`"type": "commonjs"`), ESM frontend.
 - **Prisma 6**: config lives in `prisma.config.ts`; run `npx prisma migrate dev` after schema changes and regenerate the client.
 - **Response shapes differ per endpoint** — always unwrap defensively (`res?.data || res?.result || res`).
-- **API base URLs are hardcoded** to `http://localhost:6969` in `frontend/src/api/axios.js` and `frontend/src/api/admin.js`. There is no Vite proxy / env-based URL config.
+- **API base URLs are hardcoded** to `VITE_API_URL` in `frontend/src/api/axios.js` and `frontend/src/api/admin.js`. There is no Vite proxy / env-based URL config.
 - **Note body is HTML** (TipTap). Never render note previews with `dangerouslySetInnerHTML` without sanitizing; previews strip HTML via DOMParser (`NoteList.jsx:25`).
 - **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again.
 - **Email**: `utils/sendMail.js` is the only active sender — the Brevo API (`BREVO_*` vars). `configs/otp.js` (Nodemailer/Resend) is dead code.

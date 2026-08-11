@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_ADMIN = "http://localhost:6969/api/admin/dashboard";
+const API_ADMIN = "VITE_API_URL/api/admin/dashboard";
 
 export const getDashboardStats = async (accessToken) => {
   const res = await axios.get(`${API_ADMIN}/dashboard-stats`, {

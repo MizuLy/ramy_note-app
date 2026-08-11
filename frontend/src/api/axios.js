@@ -1,13 +1,13 @@
 import axios from "axios";
 import { data } from "react-router-dom";
 
-const API_AUTH = "http://localhost:6969/api/auth";
-const API_TAG = "http://localhost:6969/api/tags";
-const API_OTP = "http://localhost:6969/api/otp";
-const API_NOTE = "http://localhost:6969/api/notes";
-const API_FOLDER = "http://localhost:6969/api/folders";
-const API_TODO = "http://localhost:6969/api/todos";
-const API_JOURNAL = "http://localhost:6969/api/journals";
+const API_AUTH = "VITE_API_URL/api/auth";
+const API_TAG = "VITE_API_URL/api/tags";
+const API_OTP = "VITE_API_URL/api/otp";
+const API_NOTE = "VITE_API_URL/api/notes";
+const API_FOLDER = "VITE_API_URL/api/folders";
+const API_TODO = "VITE_API_URL/api/todos";
+const API_JOURNAL = "VITE_API_URL/api/journals";
 
 const getAuthHeader = (accessToken) => ({
   headers: { Authorization: `Bearer ${accessToken}` },
