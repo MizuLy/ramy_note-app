@@ -24,7 +24,9 @@ app.use(
   }),
 );
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(
+  morgan(process.env.NODE_ENV === "production" ? "combined" : "development"),
+);
 app.use(cookieParser());
 app.use(generalLimiter);
 
