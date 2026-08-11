@@ -9,6 +9,8 @@ const {
   changeEmail,
   changePassword,
   changeAvatar,
+  forgotPassword,
+  resetPassword,
 } = require("../controllers/auth.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const { authLimiter } = require("../middlewares/rateLimiter");
@@ -30,5 +32,7 @@ router.patch(
   upload.single("image"),
   changeAvatar,
 );
+router.post("/forgot-password", authLimiter, forgotPassword);
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

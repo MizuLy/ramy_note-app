@@ -1,11 +1,12 @@
 const { prisma } = require("../configs/db");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../utils/generateToken");
 const jwt = require("jsonwebtoken");
-const { sendOtp } = require("../utils/sendMail");
+const { sendOtp, sendResetLink } = require("../utils/sendMail");
 
 // Refresh controller
 const refresh = async (req, res) => {
@@ -121,7 +122,7 @@ const login = async (req, res) => {
 
 // Logout
 const logout = async (req, res) => {
-  res.cookie("refreshToken", {
+  res.clearCookie("refreshToken", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
@@ -221,6 +222,67 @@ const changePassword = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await prisma.users.findUnique({
+      where: { email },
+    });
+
+    if (!user)
+      return res.status(200).json({
+        status: "success",
+        message: "A reset link has been sent, please check your email.",
+      });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
+
+    await prisma.resetTokens.deleteMany({ where: { email } }); // Clear old ones
+    await prisma.resetTokens.create({ data: { email, token, expiresAt } });
+
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    await sendResetLink(email, resetLink);
+
+    return res.status(200).json({
+      status: "success",
+      message: "A reset link has been sent, please check your email.",
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const record = await prisma.resetTokens.findUnique({ where: { token } });
+
+    if (!record)
+      return res.status(400).json({ error: "Invalid or expired token" });
+    if (record.expiresAt < new Date())
+      return res.status(400).json({ error: "Token has expired" });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.users.update({
+      where: { email: record.email },
+      data: { password: hashedPassword },
+    });
+
+    await prisma.resetTokens.delete({ where: { token } });
+
+    res
+      .status(200)
+      .json({ status: "success", message: "Password reset successful" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const getUser = async (req, res) => {
   try {
     const user = await prisma.users.findUnique({
@@ -257,6 +319,8 @@ module.exports = {
   changeName,
   changeEmail,
   changePassword,
+  forgotPassword,
+  resetPassword,
   getUser,
   changeAvatar,
 };
