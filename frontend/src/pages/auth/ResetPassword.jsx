@@ -34,7 +34,11 @@ export default function ResetPassword() {
       setMessage("Password reset successful! Redirecting to login...");
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to reset password");
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to reset password";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -73,7 +73,11 @@ export default function VerifyOtp() {
       setMessage("Email verified! Redirecting to login...");
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      setError(err.response?.data?.error || "Invalid or expired OTP");
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Invalid or expired OTP";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -90,7 +94,11 @@ export default function VerifyOtp() {
       setDigits(["", "", "", ""]);
       inputRefs.current[0]?.focus();
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to resend OTP");
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to resend OTP";
+      setError(errorMsg);
     } finally {
       setResending(false);
     }

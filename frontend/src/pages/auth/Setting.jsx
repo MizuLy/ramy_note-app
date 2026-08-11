@@ -104,6 +104,7 @@ export default function Settings() {
         success: (msg) => msg,
         error: (err) =>
           err?.response?.data?.error ||
+          err?.response?.data?.message ||
           err?.message ||
           "Failed to update avatar",
       })
@@ -118,7 +119,11 @@ export default function Settings() {
       setUser((prev) => ({ ...prev, name }));
       toast.success("Display name updated!");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to update name");
+      toast.error(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to update name",
+      );
     } finally {
       setNameSaving(false);
     }
@@ -136,7 +141,11 @@ export default function Settings() {
       toast.success("Email updated successfully!");
       setEmailPassword("");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to update email");
+      toast.error(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to update email",
+      );
     } finally {
       setEmailSaving(false);
     }
@@ -157,7 +166,11 @@ export default function Settings() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      toast.error(err.response?.data?.error || "Failed to update password");
+      toast.error(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to update password",
+      );
     } finally {
       setPasswordSaving(false);
     }

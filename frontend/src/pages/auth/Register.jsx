@@ -30,9 +30,11 @@ export default function Register() {
       setUser(res.data.data);
       navigate("/verify-otp", { state: { email: formData.email } });
     } catch (err) {
-      setError(
-        err.response?.data?.error || "Register failed. Please try again.",
-      );
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Register failed. Please try again.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

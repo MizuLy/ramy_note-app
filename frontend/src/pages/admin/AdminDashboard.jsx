@@ -55,7 +55,11 @@ export default function AdminDashboard() {
       setStats(statsData);
       setUsers(usersData);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to load admin data");
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to load admin data",
+      );
     } finally {
       setLoading(false);
     }
@@ -76,7 +80,11 @@ export default function AdminDashboard() {
         prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)),
       );
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to update role");
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to update role",
+      );
     }
   };
 
@@ -88,7 +96,11 @@ export default function AdminDashboard() {
       await removeUser(userId, accessToken);
       setUsers((prev) => prev.filter((u) => u.id !== userId));
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to delete user");
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Failed to delete user",
+      );
     }
   };
 

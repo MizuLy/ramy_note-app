@@ -20,7 +20,11 @@ export default function ForgotPassword() {
       setMessage(res.data.message);
       setSubmitted(true);
     } catch (err) {
-      setError(err.response?.data?.error || "Something went wrong");
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Something went wrong";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -34,10 +34,11 @@ export default function Login() {
       });
       navigate("/");
     } catch (err) {
-      setError(
+      const errorMsg =
         err.response?.data?.error ||
-          "Login failed. Please check your credentials.",
-      );
+        err.response?.data?.message ||
+        "Login failed. Please check your credentials.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
