@@ -9,6 +9,7 @@ import {
   deleteNote,
   restoreNote,
   permanentDeleteNote,
+  togglePin,
 } from "../../../api/axios";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -402,7 +403,7 @@ export default function NoteEditor({
     setIsPinned(nextPinnedState);
 
     try {
-      await updateNote(noteId, { isPinned: nextPinnedState }, accessToken);
+      await togglePin(noteId, nextPinnedState, accessToken);
       onNoteUpdated?.();
       toast.success(nextPinnedState ? "Note pinned to top" : "Note unpinned");
     } catch (err) {
