@@ -15,24 +15,63 @@ const {
 const verifyToken = require("../middlewares/verifyToken");
 const { authLimiter } = require("../middlewares/rateLimiter");
 const upload = require("../configs/upload");
+const validateRequest = require("../middlewares/validateRequest");
+const {
+  registerSchema,
+  loginSchema,
+  changeNameSchema,
+  changeEmailSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} = require("../validators/auth.validator");
 
 const router = express.Router();
 
 router.post("/refresh", refresh);
-router.post("/register", authLimiter, register);
-router.post("/login", authLimiter, login);
+router.post(
+  "/register",
+  validateRequest(registerSchema),
+  authLimiter,
+  register,
+);
+router.post("/login", validateRequest(loginSchema), authLimiter, login);
 router.post("/logout", logout);
 router.get("/current-user", verifyToken, getUser);
-router.patch("/change-name", verifyToken, changeName);
-router.patch("/change-email", verifyToken, changeEmail);
-router.patch("/change-password", verifyToken, changePassword);
+router.patch(
+  "/change-name",
+  validateRequest(changeNameSchema),
+  verifyToken,
+  changeName,
+);
+router.patch(
+  "/change-email",
+  validateRequest(changeEmailSchema),
+  verifyToken,
+  changeEmail,
+);
+router.patch(
+  "/change-password",
+  validateRequest(changePasswordSchema),
+  verifyToken,
+  changePassword,
+);
 router.patch(
   "/change-avatar",
   verifyToken,
   upload.single("image"),
   changeAvatar,
 );
-router.post("/forgot-password", authLimiter, forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post(
+  "/forgot-password",
+  validateRequest(forgotPasswordSchema),
+  authLimiter,
+  forgotPassword,
+);
+router.post(
+  "/reset-password",
+  validateRequest(resetPasswordSchema),
+  resetPassword,
+);
 
 module.exports = router;
