@@ -1,6 +1,6 @@
 # Ramy Note App
 
-A full-stack note-taking application ("RAM Shortage") with notes (rich-text, pin, folders, tags, trash, search), to-dos, journals, email-OTP auth, and an admin panel.
+A full-stack note-taking application ("RAM Shortage") with notes (rich-text, pin, folders, tags, trash, search), to-dos, journals, email-OTP auth, forgot/reset password, and an admin panel.
 
 > For deep implementation details (data model, request flow, gotchas), see **[agent_guide.md](./agent_guide.md)**.
 
@@ -8,7 +8,7 @@ A full-stack note-taking application ("RAM Shortage") with notes (rich-text, pin
 
 | Directory | Stack |
 |-----------|-------|
-| `backend/` | Node.js + Express 5, Prisma ORM, PostgreSQL, JWT, Cloudinary, Nodemailer/Resend |
+| `backend/` | Node.js + Express 5, Prisma ORM, PostgreSQL, JWT, Cloudinary, Brevo (email) |
 | `frontend/` | React 19 + Vite, React Router 7, TipTap 3, Tailwind + daisyUI, Axios |
 
 ## Repository Structure
@@ -63,6 +63,7 @@ Both apps must run together — backend CORS only allows `http://localhost:5173`
 
 - **API routes** are mounted under `/api`; responses vary per endpoint (`data`, `result`, `folder`, `journal`) — unwrap defensively (`res?.data || res?.result || res`).
 - **Auth**: access token (15m, Bearer) + httpOnly refresh token cookie (7d). Frontend refreshes only once at boot.
+- **Forgot/reset password**: `POST /api/auth/forgot-password` emails a 30-min reset link (`FRONTEND_URL/reset-password?token=...`) via Brevo; `POST /api/auth/reset-password` consumes the single-use token.
 - **Notes & Journals** use soft delete (`isDeleted`/`deletedAt`) with trash + restore + permanent-delete endpoints.
 - **First registered user** automatically becomes `ADMIN`.
 
