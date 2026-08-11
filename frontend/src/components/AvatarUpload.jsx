@@ -24,7 +24,7 @@ export default function AvatarUpload({ currentAvatar, onUploadSuccess }) {
     try {
       const token = localStorage.getItem("token"); // Retrieve your auth token
 
-      const response = await fetch("VITE_API_URL/api/auth/change-avatar", {
+      const response = await fetch(import.meta.env.VITE_API_URL;/api/auth/change-avatar", {
         method: "PATCH",
         headers: {
           Authorization: token ? `Bearer ${token}` : "",
