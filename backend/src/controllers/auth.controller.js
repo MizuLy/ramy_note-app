@@ -242,7 +242,7 @@ const forgotPassword = async (req, res) => {
     await prisma.resetTokens.deleteMany({ where: { email } }); // Clear old ones
     await prisma.resetTokens.create({ data: { email, token, expiresAt } });
 
-    const resetLink = `${process.env.PRODUCTION_URL}/reset-password?token=${token}`;
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
     await sendResetLink(email, resetLink);
 
