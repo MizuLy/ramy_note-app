@@ -17,6 +17,8 @@ import Journal from "./pages/dashboard/journal/Journal";
 import { Toaster } from "react-hot-toast";
 import NotFound from "./error/NotFound";
 import JournalTrash from "./pages/dashboard/journal/JournalTrash";
+import ResetPassword from "./pages/auth/ResetPassword";
+import ForgotPassword from "./pages/auth/ForgotPassword";
 
 export default function App() {
   return (
@@ -52,6 +54,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Route>
 
         <Route

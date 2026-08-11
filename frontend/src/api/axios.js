@@ -49,6 +49,12 @@ export const verifyOtp = (data) =>
 export const requestOtp = (data) =>
   axios.post(`${API_OTP}/request`, data, { withCredentials: true });
 
+// Reset/Forgot password
+export const forgotPassword = (data) =>
+  axios.post(`${API_AUTH}/forgot-password`, data);
+export const resetPassword = (data) =>
+  axios.post(`${API_AUTH}/reset-password`, data);
+
 // Tag
 export const getTags = async (accessToken) => {
   const res = await axios.get(API_TAG, getAuthHeader(accessToken));
