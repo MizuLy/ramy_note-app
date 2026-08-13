@@ -11,7 +11,7 @@ const createNote = async (req, res) => {
       tags: {
         connectOrCreate: (tagNames || []).map((name) => ({
           where: { tag_userId: { tag: name, userId: req.user.id } },
-          create: { tag: name },
+          create: { tag: name, userId: req.user.id },
         })),
       },
     };
@@ -109,6 +109,8 @@ const getNoteId = async (req, res) => {
       },
       include: {
         tags: true,
+        user: { select: { id: true, name: true, email: true } }, // add this
+        editors: { select: { id: true, name: true, email: true } }, // useful for showing who else has access
       },
     });
 
@@ -165,7 +167,9 @@ const updateNote = async (req, res) => {
         .json({ error: "Not authorized to edit this note" });
     }
 
-    const noteUpdate = {};
+    const noteUpdate = {
+      updatedAt: new Date(),
+    };
     if (title !== undefined) noteUpdate.title = title;
     if (body !== undefined) noteUpdate.body = body;
     if (tagNames !== undefined)
@@ -238,9 +242,7 @@ const removeNote = async (req, res) => {
       data: { isDeleted: true, deletedAt: new Date() },
     });
 
-    res
-      .status(200)
-      .json({ status: "success", message: "Note moved to trash" });
+    res.status(200).json({ status: "success", message: "Note moved to trash" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -305,6 +307,98 @@ const permanentDeleteNote = async (req, res) => {
   }
 };
 
+const addEditor = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ error: "A valid email is required" });
+    }
+
+    const note = await prisma.notes.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!note) return res.status(404).json({ error: "Note not found" });
+
+    if (note.userId !== req.user.id)
+      return res.status(403).json({ error: "Not authorized" });
+
+    const userToAdd = await prisma.users.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!userToAdd) return res.status(404).json({ error: "User not found" });
+
+    if (userToAdd.id === req.user.id)
+      return res.status(403).json({ error: "You are the owner, dummy!" });
+
+    const result = await prisma.notes.update({
+      where: { id: note.id },
+      data: {
+        editors: {
+          connect: { id: userToAdd.id },
+        },
+      },
+      include: { editors: true },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: `${userToAdd.name} now has the editor access`,
+      result,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const removeEditor = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ error: "A valid email is required" });
+    }
+
+    const note = await prisma.notes.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!note) return res.status(404).json({ error: "Note not found" });
+
+    if (note.userId !== req.user.id)
+      return res.status(403).json({ error: "Not authorized" });
+
+    const userToRemove = await prisma.users.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!userToRemove) return res.status(404).json({ error: "User not found" });
+
+    if (userToRemove.id === req.user.id)
+      return res.status(403).json({ error: "You already have full access" });
+
+    const result = await prisma.notes.update({
+      where: { id: note.id },
+      data: {
+        editors: {
+          disconnect: { id: userToRemove.id },
+        },
+      },
+      include: { editors: true },
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: `${userToRemove.name} has been revoked from editor`,
+      result,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   createNote,
   getNotes,
@@ -314,4 +408,6 @@ module.exports = {
   removeNote,
   restoreNote,
   permanentDeleteNote,
+  addEditor,
+  removeEditor,
 };

@@ -8,6 +8,8 @@ const {
   getNoteId,
   restoreNote,
   permanentDeleteNote,
+  addEditor,
+  removeEditor,
 } = require("../controllers/note.controller");
 const verifyToken = require("../middlewares/verifyToken");
 
@@ -21,5 +23,7 @@ router.get("/:id", verifyToken, getNoteId);
 router.put("/:id", verifyToken, updateNote);
 router.patch("/:id", verifyToken, togglePin); // this doesn't need /:id/toggle like toggleDone in todo.route.js cuz updateNote is PUT
 router.delete("/:id", verifyToken, removeNote);
+router.post("/:id/editors", verifyToken, addEditor);
+router.delete("/:id/editors", verifyToken, removeEditor);
 
 module.exports = router;
