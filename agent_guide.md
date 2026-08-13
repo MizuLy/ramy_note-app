@@ -26,15 +26,13 @@ Two separate apps live in a single repo:
 Setup commands (docker compose, migrate, dev servers) are in **[README.md](./README.md)**. The backend `.env` file uses:
 
 - `DATABASE_URL` — Postgres connection string used by Prisma.
-- `DOCKER_URL` — commented-out alternative datasource URL (uncomment in `prisma/schema.prisma` to use).
-- `PORT`, `NODE_ENV` (production enables secure cookies).
+- `FRONTEND_URL` — CORS origin (in `server.js`) **and** frontend base URL used to build the password-reset link (`${FRONTEND_URL}/reset-password?token=...`) in `auth.controller.js`.
+- `PORT`, `NODE_ENV` — production enables secure cookies and `sameSite: none` on the refresh cookie.
 - `ACCESS_SECRET` / `REFRESH_SECRET` / `JWT_EXPIRES_IN` — JWT secrets and refresh lifetime (default `7d`).
-- `BREVO_API_URL` / `BREVO_SENDER_EMAIL` / `BREVO_API_KEY` — Brevo (Sendinblue) API used by `utils/sendMail.js` for **all** transactional email (OTP, reset link). Sent as raw `axios` POSTs — Nodemailer is no longer used.
-- `FRONTEND_URL` — frontend base URL used to build the password-reset link (`${FRONTEND_URL}/reset-password?token=...`) in `auth.controller.js`.
-- `SMTP_USER` / `SMTP_PASS` (Gmail dev) and `RESEND_API_KEY` (Resend SMTP prod) — still read by `configs/otp.js`, but that config is **currently unused dead code** (nothing imports it).
+- `BREVO_API_URL` / `BREVO_API_KEY` / `BREVO_SENDER_EMAIL` — Brevo (Sendinblue) API used by `utils/sendMail.js` for **all** transactional email (OTP, reset link). Sent as raw `axios` POSTs — Nodemailer is no longer used.
 - `CLOUDINARY_CLOUD_NAME` / `CLOUDINARY_API_KEY` / `CLOUDINARY_API_SECRET` — Cloudinary credentials read by `configs/cloudinary.js` for avatar uploads.
 
-> **Gotcha:** `.env.example` currently lists only the Cloudinary vars — `FRONTEND_URL` and the `BREVO_*` vars are **not** in it. Add them when provisioning a new environment or the reset flow will build a broken link (`undefined/reset-password?...`).
+> **Notes:** `.env.example` is the source of truth and already lists everything above (including `FRONTEND_URL` and all `BREVO_*` vars) — copy it as-is when provisioning. `DOCKER_URL` and the SMTP vars (`SMTP_USER`/`SMTP_PASS`/`RESEND_API_KEY`) were **removed** from the example: `DOCKER_URL` survives only as a commented line in `schema.prisma`, and `configs/otp.js` (which still reads the SMTP vars) is **unused dead code** (nothing imports it).
 
 ## 3. Repository Layout
 
@@ -77,7 +75,7 @@ Ramy (Note-app)/
 Prisma client provider is `prisma-client-js`, datasource `postgresql`. All IDs are UUID strings. All `@relation(...)` relations have `onDelete: Cascade` (except note→folder, which is `SetNull`).
 
 - **Users** — `name`, unique `email`, hashed `password`, optional `image` (Cloudinary URL), `role` (`RoleList`: `ADMIN` | `USER`), `isVerified` (email OTP). First registered user auto-becomes `ADMIN` (`userCount === 0` in `auth.controller.js:55`).
-- **Notes** — optional `title`/`body` (body stores TipTap HTML), `isPinned`, soft delete via `isDeleted` + `deletedAt`, optional `folderId`. Owner relation `"Owner"`; implicit many-to-many `editors` (`"Editor"`) for shared editing; implicit m2m with `Tags`.
+- **Notes** — optional `title`/`body` (body stores TipTap HTML), `isPinned`, `updatedAt` (`@updatedAt`, also set manually in `updateNote`), soft delete via `isDeleted` + `deletedAt`, optional `folderId`. Owner relation `"Owner"`; implicit many-to-many `editors` (`"Editor"`) for shared editing; implicit m2m with `Tags`.
 - **Todos** — `title`, `isDone`, optional `dueDate`.
 - **Journals** — optional `title`, required `body`, optional `mood` (`Mood` enum: HAPPY, SAD, TIRED, ANXIOUS, EXCITED, NEUTRAL), `entryDate`, soft delete via `isDeleted`/`deletedAt`.
 - **Tags** — `tag` + `userId`, `@@unique([tag, userId])`. Connected to notes via implicit m2m.
@@ -85,7 +83,7 @@ Prisma client provider is `prisma-client-js`, datasource `postgresql`. All IDs a
 - **Otps** — `email`, `otp`, `expiresAt` (5 min), not tied to a user row.
 - **ResetTokens** — `email`, unique `token` (32-byte `crypto` hex, 64 chars), `expiresAt` (30 min), not tied to a user row. Created on forgot-password (old tokens for that email are cleared first via `deleteMany`), single-use — deleted after a successful reset.
 
-The editor m2m on Notes (`editors`) exists in the schema and the note controller authorizes editors, but **no API or UI exposes sharing yet** — do not remove it, it is a planned feature.
+The editor m2m on Notes (`editors`) is **fully implemented**: the owner adds/removes editors via the API (`POST` / `DELETE /api/notes/:id/editors`) and from the NoteEditor "Manage" button. Editors get read + update access to the shared note; pin/soft-delete/restore/permanent-delete stay owner-only (see §5/§6).
 
 ## 5. Backend Architecture
 
@@ -99,7 +97,7 @@ The editor m2m on Notes (`editors`) exists in the schema and the note controller
 - `POST /api/otp/request` & `POST /api/otp/verify` → verify sets `isVerified: true`.
 - `POST /api/auth/forgot-password` → generates a 32-byte hex token (30 min expiry), stores it in `ResetTokens` (clearing old ones for the email), and emails `FRONTEND_URL/reset-password?token=...` via Brevo. Returns a generic success message even if the email doesn't exist (avoids user enumeration).
 - `POST /api/auth/reset-password` → validates token + expiry, hashes the new password, updates the user, deletes the token.
-- `POST /api/auth/login` → checks `isVerified`, returns `{ accessToken, data: {id, name, email, image, role} }` and sets an httpOnly `refreshToken` cookie (7d, `sameSite: strict`). The frontend `Login` page normalizes `image`/`avatar` before storing the user.
+- `POST /api/auth/login` → checks `isVerified`, returns `{ accessToken, data: {id, name, email, image, role} }` and sets an httpOnly `refreshToken` cookie (7d; `sameSite: strict` in dev, `sameSite: none` + `secure` in production). The frontend `Login` page normalizes `image`/`avatar` before storing the user.
 - `POST /api/auth/refresh` → reads cookie, returns a new `accessToken` + user object. The frontend calls this on app mount to restore the session.
 - Access token expires in **15 minutes** (`utils/generateToken.js`). There is currently **no automatic access-token refresh on 401 in the frontend**; `AuthProvider` only refreshes once at boot.
 
@@ -109,7 +107,7 @@ The editor m2m on Notes (`editors`) exists in the schema and the note controller
 |-------|---------|-------|
 | `/auth` | refresh, register, login, logout, current-user, change-name, change-email, change-password, change-avatar (multipart), forgot-password, reset-password | avatar via multer→Cloudinary; reset link via Brevo |
 | `/otp` | request, verify | |
-| `/notes` | GET list, POST, GET `/:id`, PUT `/:id`, PATCH `/:id` (togglePin), DELETE `/:id` (soft delete), `/:id/restore`, `/:id/permanent` | supports `?trash=true`, `?tag=`, `?pinned=`, `?search=`, pagination |
+| `/notes` | GET list, POST, GET `/:id`, PUT `/:id`, PATCH `/:id` (togglePin), DELETE `/:id` (soft delete), `/:id/restore`, `/:id/permanent`, POST `/:id/editors` (add editor), DELETE `/:id/editors` (remove editor) | supports `?trash=true`, `?tag=`, `?pinned=`, `?search=`, pagination |
 | `/folders` | GET list, POST, GET `/:id`, PATCH `/:id`, DELETE `/:id` | |
 | `/tags` | GET list, POST, PATCH `/:id`, DELETE `/:id` | |
 | `/todos` | GET list, POST, PATCH `/:id`, `/:id/toggle`, DELETE `/:id` | |
@@ -134,7 +132,7 @@ The editor m2m on Notes (`editors`) exists in the schema and the note controller
 - `configs/upload.js` + `cloudinary.js` — multer with Cloudinary storage, folder `ramy-note-app/avatars`, 300×300 fill crop.
 - `utils/sendMail.js` — `sendOtp` / `sendSuccess` / `sendResetLink`; sends **all** email via the Brevo API (`axios` POST to `BREVO_API_URL`), no Nodemailer involved.
 - `configs/otp.js` — Nodemailer transporter (Resend SMTP prod / Gmail dev); currently **unused dead code** (kept for reference).
-- `utils/generateToken.js` — access (15m) + refresh (7d, sets cookie) tokens.
+- `utils/generateToken.js` — access (15m) + refresh (7d) tokens; refresh cookie is `httpOnly`, `sameSite: strict` in dev and `sameSite: none` + `secure` in production (`generateToken.js:15`).
 
 ## 6. Frontend Architecture
 
@@ -157,12 +155,13 @@ Routes in `App.jsx`:
 
 ### API layer (`src/api/axios.js`)
 
-Plain axios wrappers (not a shared instance). Every authed call passes `Authorization: Bearer <accessToken>` and `withCredentials: true` (needed for refresh cookie). Base URLs are hardcoded to `VITE_API_URL`. `forgotPassword`/`resetPassword` are the only auth helpers that don't attach the bearer header (they run pre-login).
+Plain axios wrappers (not a shared instance). Every authed call passes `Authorization: Bearer <accessToken>` and `withCredentials: true` (needed for refresh cookie). Base URLs are hardcoded to `VITE_API_URL`. `forgotPassword`/`resetPassword` are the only auth helpers that don't attach the bearer header (they run pre-login). `addEditor`/`removeEditor` hit `POST`/`DELETE /api/notes/:id/editors` (removeEditor sends the email in the request body via axios `data`).
 
 ### Pages
 
-- **note/** — `Note.jsx` (container: two-pane list + editor, route-based selection), `Trash.jsx` (same two-pane layout for `/trash`, wires `NoteList` + `NoteEditor` with `isTrash`), `NoteList.jsx` (search, time filters, pin, trash actions), `NoteEditor.jsx` (TipTap rich text editor).
-  - **Autosave**: `NoteEditor` debounces saves by 800ms via refs (`titleRef`, `isPinnedRef`, `selectedTagsRef`, `activeNoteIdRef`) so stale closures don't clobber newer content. Editor content is stored as HTML in `notes.body`.
+- **note/** — `Note.jsx` (container: two-pane list + editor, route-based selection), `Trash.jsx` (same two-pane layout for `/trash`, wires `NoteList` + `NoteEditor` with `isTrash`), `NoteList.jsx` (search, time filters, pin, trash actions — sorts by `updatedAt || createdAt`), `NoteEditor.jsx` (TipTap rich text editor).
+  - **Autosave**: `NoteEditor` debounces saves by 800ms via refs (`titleRef`, `isPinnedRef`, `selectedTagsRef`, `activeNoteIdRef`) so stale closures don't clobber newer content. Editor content is stored as HTML in `notes.body`. On save it reads back `res.data.data.updatedAt` to update the "Last Modified" timestamp.
+  - **Sharing**: `NoteEditor` renders a metadata section with owner ("Created by", from `getNoteId`'s included `user`), an editors count + **Manage** button (owner-only, hidden in trash mode) that opens a modal to add/remove editors by email via `addEditor`/`removeEditor`.
   - **Trash mode**: `NoteEditor` takes an `isTrash` prop — the toolbar hides pin / folder / new-note actions and instead offers Restore + Delete Forever (permanent delete is confirmed via `ConfirmModal`). Trash notes are fetched with `getNoteId(id, token, { trash: true })`.
   - Folder/tag filtering on the list is done **client-side** after fetching all notes (with `?trash=true` passed for the trash view).
 - **todo/** — `Todo.jsx` fully implemented (add, toggle, delete, filter tabs, optimistic UI with revert).
@@ -191,7 +190,8 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 - **Response shapes differ per endpoint** — always unwrap defensively (`res?.data || res?.result || res`).
 - **API base URLs are hardcoded** to `VITE_API_URL` in `frontend/src/api/axios.js` and `frontend/src/api/admin.js`. There is no Vite proxy / env-based URL config.
 - **Note body is HTML** (TipTap). Never render note previews with `dangerouslySetInnerHTML` without sanitizing; previews strip HTML via DOMParser (`NoteList.jsx:25`).
-- **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again.
+- **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again. The refresh cookie is `sameSite: strict` in dev but `sameSite: none` (requires `secure`) in production.
+- **Note sharing**: only the owner can add/remove editors (`addEditor`/`removeEditor` check `note.userId`); editors can read + edit the note body/title/tags but **cannot** pin, trash, restore, or permanently delete it — those handlers check `userId` only. Shared notes are fetched via the `OR: [{ userId }, { editors: { some: { id } } }]` filter in `getNotes`/`getNoteId`.
 - **Email**: `utils/sendMail.js` is the only active sender — the Brevo API (`BREVO_*` vars). `configs/otp.js` (Nodemailer/Resend) is dead code.
 - **Password reset**: `POST /api/auth/forgot-password` always returns a generic success (no user enumeration); reset tokens are single-use and expire after 30 minutes. `FRONTEND_URL` must be set or the emailed link is broken (`undefined/reset-password?...`).
 - **Soft delete**: notes use `isDeleted`/`deletedAt`; permanent delete requires the note to already be in the trash (`note.controller.js:289`).
