@@ -10,6 +10,8 @@ import {
   restoreNote,
   permanentDeleteNote,
   togglePin,
+  addEditor,
+  removeEditor,
 } from "../../../api/axios";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -38,6 +40,8 @@ import {
   LuCalendar,
   LuTrash2,
   LuRotateCcw,
+  LuUsers,
+  LuUserPlus,
 } from "react-icons/lu";
 
 const getWordCount = (text) => {
@@ -95,6 +99,13 @@ export default function NoteEditor({
   const [updatedAtRaw, setUpdatedAtRaw] = useState(null);
   const [trashing, setTrashing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [noteOwner, setNoteOwner] = useState(null);
+
+  // Editors & Modal State
+  const [editors, setEditors] = useState([]);
+  const [isEditorsModalOpen, setIsEditorsModalOpen] = useState(false);
+  const [editorEmailInput, setEditorEmailInput] = useState("");
+  const [editorActionLoading, setEditorActionLoading] = useState(false);
 
   const [folders, setFolders] = useState([]);
   const [folderId, setFolderId] = useState("");
@@ -171,11 +182,20 @@ export default function NoteEditor({
       const tagNames = tagsList.map((t) =>
         typeof t === "string" ? t : t.tag || t.name || t.tagName,
       );
-      await updateNote(
+      const res = await updateNote(
         targetId,
         { title: newTitle, body: newBody, isPinned: newPinned, tagNames },
         accessToken,
       );
+
+      // Extract note data matching backend structure res.data.data
+      const updatedNote = res?.data?.data || res?.data || res?.result || res;
+
+      // Instantly update the timestamp state
+      if (updatedNote?.updatedAt) {
+        setUpdatedAtRaw(updatedNote.updatedAt);
+      }
+
       setLastSavedAt(new Date());
       onNoteUpdated?.();
 
@@ -266,6 +286,49 @@ export default function NoteEditor({
     toast.success("Tag removed");
   };
 
+  // Editor Handlers
+  const handleAddEditor = async (e) => {
+    e.preventDefault();
+    if (!editorEmailInput.trim() || !noteId) return;
+
+    setEditorActionLoading(true);
+    try {
+      const res = await addEditor(noteId, editorEmailInput.trim(), accessToken);
+      toast.success(res?.message || "Editor added successfully");
+      const updatedNote = res?.result;
+      if (updatedNote?.editors) {
+        setEditors(updatedNote.editors);
+      }
+      setEditorEmailInput("");
+    } catch (err) {
+      console.error("Failed to add editor:", err);
+      toast.error(err?.response?.data?.error || "Failed to add editor");
+    } finally {
+      setEditorActionLoading(false);
+    }
+  };
+
+  const handleRemoveEditor = async (emailToRemove) => {
+    if (!noteId) return;
+
+    setEditorActionLoading(true);
+    try {
+      const res = await removeEditor(noteId, emailToRemove, accessToken);
+      toast.success(res?.message || "Editor removed");
+      const updatedNote = res?.result;
+      if (updatedNote?.editors) {
+        setEditors(updatedNote.editors);
+      } else {
+        setEditors((prev) => prev.filter((e) => e.email !== emailToRemove));
+      }
+    } catch (err) {
+      console.error("Failed to remove editor:", err);
+      toast.error(err?.response?.data?.error || "Failed to remove editor");
+    } finally {
+      setEditorActionLoading(false);
+    }
+  };
+
   // Tiptap Setup
   const editor = useEditor({
     extensions: [StarterKit],
@@ -299,6 +362,7 @@ export default function NoteEditor({
       setLastSavedAt(null);
       setFolderId("");
       setSelectedTags([]);
+      setEditors([]);
       if (editor && !editor.isDestroyed) {
         isLoadingRef.current = true;
         editor.commands.setContent("", { emitUpdate: false });
@@ -330,6 +394,9 @@ export default function NoteEditor({
           selectedTagsRef.current = Array.isArray(initialTags)
             ? initialTags
             : [];
+
+          setNoteOwner(found.user || null);
+          setEditors(Array.isArray(found.editors) ? found.editors : []);
 
           setCreatedAtRaw(found.createdAt);
           setUpdatedAtRaw(found.updatedAt);
@@ -377,6 +444,7 @@ export default function NoteEditor({
         setLastSavedAt(new Date());
         setFolderId(newNote.folderId || defaultFolderId || "");
         setSelectedTags([]);
+        setEditors([]);
         if (editor && !editor.isDestroyed) {
           isLoadingRef.current = true;
           editor.commands.setContent("", { emitUpdate: false });
@@ -489,7 +557,7 @@ export default function NoteEditor({
   const readTime = getReadTime(wordCount);
 
   return (
-    <div className="flex-1 h-screen flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden">
+    <div className="flex-1 h-screen flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden relative">
       <div className="w-full max-w-2xl mx-auto flex flex-col h-full">
         {/* Top action bar */}
         <div className="px-4 pt-4 flex items-center justify-between gap-2">
@@ -642,7 +710,28 @@ export default function NoteEditor({
               <LuUser size={13} /> Created by
             </span>
             <div className="flex items-center gap-2 text-zinc-300 font-medium">
-              <span>{user?.name || user?.username || "You"}</span>
+              <span>{noteOwner?.name || noteOwner?.email || "Unknown"}</span>
+            </div>
+          </div>
+
+          {/* EDITORS ROW */}
+          <div className="flex items-center gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
+              <LuUsers size={13} /> Editors
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-300 font-medium">
+                {editors.length} {editors.length === 1 ? "editor" : "editors"}
+              </span>
+              {!isTrash && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditorsModalOpen(true)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:text-white text-zinc-400 text-xs font-medium transition-colors"
+                >
+                  <LuUserPlus size={11} /> Manage
+                </button>
+              )}
             </div>
           </div>
 
@@ -878,6 +967,84 @@ export default function NoteEditor({
           <EditorContent editor={editor} />
         </div>
       </div>
+
+      {/* MANAGE EDITORS MODAL */}
+      {isEditorsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-lg p-5 shadow-2xl text-zinc-200">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+              <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                <LuUsers size={16} /> Manage Note Editors
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsEditorsModalOpen(false)}
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <LuX size={16} />
+              </button>
+            </div>
+
+            {/* Add Editor Form */}
+            <form onSubmit={handleAddEditor} className="mt-4 flex gap-2">
+              <input
+                type="email"
+                placeholder="User email address..."
+                value={editorEmailInput}
+                onChange={(e) => setEditorEmailInput(e.target.value)}
+                className="flex-1 bg-zinc-950 border border-zinc-800 focus:border-zinc-700 text-xs rounded-md px-3 py-2 text-zinc-200 outline-none placeholder-zinc-600"
+              />
+              <button
+                type="submit"
+                disabled={editorActionLoading || !editorEmailInput.trim()}
+                className="px-3 py-2 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 font-medium text-xs rounded-md transition-colors disabled:opacity-50 shrink-0"
+              >
+                {editorActionLoading ? "Adding..." : "Add"}
+              </button>
+            </form>
+
+            {/* Existing Editors List */}
+            <div className="mt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
+              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                Current Editors ({editors.length})
+              </p>
+              {editors.length === 0 ? (
+                <p className="text-xs text-zinc-500 italic py-2">
+                  No additional editors added yet.
+                </p>
+              ) : (
+                editors.map((ed) => {
+                  const edId = ed.id || ed._id || ed.email;
+                  return (
+                    <div
+                      key={edId}
+                      className="flex items-center justify-between bg-zinc-950 border border-zinc-800/80 rounded px-3 py-2 text-xs"
+                    >
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <span className="font-medium text-zinc-200 truncate">
+                          {ed.name || "User"}
+                        </span>
+                        <span className="text-zinc-500 text-[11px] truncate">
+                          {ed.email}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveEditor(ed.email)}
+                        disabled={editorActionLoading}
+                        className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-900 transition-colors disabled:opacity-50 shrink-0"
+                        title="Revoke access"
+                      >
+                        <LuX size={14} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={confirmOpen}

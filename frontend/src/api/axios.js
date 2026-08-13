@@ -150,6 +150,21 @@ export const togglePin = async (id, isPinned, accessToken) => {
   );
   return res.data;
 };
+export const addEditor = async (id, email, accessToken) => {
+  const res = await axios.post(
+    `${API_NOTE}/${id}/editors`,
+    { email },
+    getAuthHeader(accessToken),
+  );
+  return res.data;
+};
+export const removeEditor = async (id, email, accessToken) => {
+  const res = await axios.delete(`${API_NOTE}/${id}/editors`, {
+    ...getAuthHeader(accessToken),
+    data: { email },
+  });
+  return res.data;
+};
 
 // FOLDER
 export const getFolders = async (accessToken) => {
