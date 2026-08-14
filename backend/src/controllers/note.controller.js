@@ -109,8 +109,8 @@ const getNoteId = async (req, res) => {
       },
       include: {
         tags: true,
-        user: { select: { id: true, name: true, email: true } }, // add this
-        editors: { select: { id: true, name: true, email: true } }, // useful for showing who else has access
+        user: { select: { id: true, name: true, email: true, image: true } }, // add this
+        editors: { select: { id: true, name: true, email: true, image: true } }, // useful for showing who else has access
       },
     });
 
