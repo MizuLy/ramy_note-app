@@ -3,7 +3,6 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import Login from "./pages/auth/Login";
 import { Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/dashboard/Dashboard";
-import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminRoute from "./components/AdminRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -77,17 +76,14 @@ export default function App() {
           <Route path="/journal/trash" element={<JournalTrash />} />
           <Route path="/journal/trash/:id" element={<JournalTrash />} />
           <Route path="/settings" element={<Settings />} />
-        </Route>
-
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route path="/admin" element={<AdminDashboard />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

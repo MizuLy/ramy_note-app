@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { IoSearch } from "react-icons/io5";
 import { PiNotebookLight } from "react-icons/pi";
@@ -27,9 +27,6 @@ import TagModal from "../components/modals/TagModal";
 // API
 import { getFolders, deleteFolder, getTags, deleteTag } from "../api/axios";
 
-// Tracks whether the viewport is below Tailwind's `md` breakpoint (768px),
-// updating on resize/orientation change instead of reading window.innerWidth
-// once at render time.
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
     () => typeof window !== "undefined" && window.innerWidth < 768,
@@ -50,8 +47,6 @@ export default function Sidebar({ onCloseMobile }) {
   });
 
   const isMobile = useIsMobile();
-  // On mobile the sidebar always renders expanded (it's a full drawer),
-  // so labels should show whenever we're not collapsed OR we're on mobile.
   const showLabels = !collapsed || isMobile;
 
   // Folder States
@@ -78,12 +73,10 @@ export default function Sidebar({ onCloseMobile }) {
 
   const { user, accessToken } = useAuth();
 
-  // Helper to handle link navigation & auto-close mobile drawer
   const handleNavClick = () => {
     if (onCloseMobile) onCloseMobile();
   };
 
-  // Toggles
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -108,8 +101,7 @@ export default function Sidebar({ onCloseMobile }) {
     });
   };
 
-  // Fetch Operations
-  const fetchFolders = async () => {
+  const fetchFolders = useCallback(async () => {
     if (!accessToken) return;
     try {
       const res = await getFolders(accessToken);
@@ -118,9 +110,9 @@ export default function Sidebar({ onCloseMobile }) {
     } catch (error) {
       console.error("Error fetching folders:", error);
     }
-  };
+  }, [accessToken]);
 
-  const fetchTagsList = async () => {
+  const fetchTagsList = useCallback(async () => {
     if (!accessToken) return;
     try {
       const res = await getTags(accessToken);
@@ -129,27 +121,59 @@ export default function Sidebar({ onCloseMobile }) {
     } catch (error) {
       console.error("Error fetching tags:", error);
     }
-  };
-
-  useEffect(() => {
-    fetchFolders();
-    fetchTagsList();
   }, [accessToken]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      if (!accessToken) return;
+      try {
+        const [foldersRes, tagsRes] = await Promise.all([
+          getFolders(accessToken),
+          getTags(accessToken),
+        ]);
+        if (isMounted) {
+          const folderList =
+            foldersRes?.data || foldersRes?.result || foldersRes || [];
+          const tagList = tagsRes?.data || tagsRes?.result || tagsRes || [];
+          setFolders(Array.isArray(folderList) ? folderList : []);
+          setTags(Array.isArray(tagList) ? tagList : []);
+        }
+      } catch (error) {
+        if (isMounted) console.error("Error fetching sidebar data:", error);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken]);
+
+  // Handle Context Menu dismissal & key press
+  useEffect(() => {
     if (!contextMenu) return;
+
     const closeMenu = () => setContextMenu(null);
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") setContextMenu(null);
+    };
+
     window.addEventListener("click", closeMenu);
     window.addEventListener("scroll", closeMenu, true);
     window.addEventListener("resize", closeMenu);
+    window.addEventListener("keydown", handleKeyDown);
+
     return () => {
       window.removeEventListener("click", closeMenu);
       window.removeEventListener("scroll", closeMenu, true);
       window.removeEventListener("resize", closeMenu);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [contextMenu]);
 
-  // Handlers
   const handleOpenCreateFolderModal = () => {
     setEditingFolder(null);
     setIsFolderModalOpen(true);
@@ -195,7 +219,13 @@ export default function Sidebar({ onCloseMobile }) {
 
   const handleContextMenu = (e, item, type) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, item, type });
+    // Clamp coordinates to stay inside the viewport
+    const MENU_WIDTH = 160;
+    const MENU_HEIGHT = 80;
+    const x = Math.min(e.clientX, window.innerWidth - MENU_WIDTH - 10);
+    const y = Math.min(e.clientY, window.innerHeight - MENU_HEIGHT - 10);
+
+    setContextMenu({ x, y, item, type });
   };
 
   const handleContextEdit = () => {
@@ -242,9 +272,7 @@ export default function Sidebar({ onCloseMobile }) {
         }`}
       >
         {/* Header */}
-        <div
-          className={`border-b border-zinc-700 p-4 flex items-center justify-between`}
-        >
+        <div className="border-b border-zinc-700 p-4 flex items-center justify-between shrink-0">
           {showLabels && (
             <div className="overflow-hidden pr-2">
               <h1 className="text-sm font-semibold truncate">
@@ -283,252 +311,261 @@ export default function Sidebar({ onCloseMobile }) {
           )}
         </div>
 
-        {/* Search Trigger */}
-        <div className="px-3 mt-4 mb-2">
-          <button
-            type="button"
-            onClick={() => {
-              document.getElementById("searchModal")?.showModal();
-              handleNavClick();
-            }}
-            className={`relative flex items-center rounded-md bg-zinc-700 hover:bg-zinc-900 text-sm text-zinc-400 transition-colors duration-200 w-full pl-9 pr-4 py-2 text-left ${
-              collapsed
-                ? "md:w-10 md:h-10 md:justify-center md:mx-auto md:p-0"
-                : ""
-            }`}
-          >
-            <IoSearch
-              className={`text-zinc-400 text-lg shrink-0 ${
-                collapsed ? "absolute left-3 md:static" : "absolute left-3"
-              }`}
-            />
-            {showLabels && <span>Search notes...</span>}
-          </button>
-        </div>
-
-        {/* Main Nav Items */}
-        <div className="px-3 py-2 flex-1 space-y-1 overflow-y-auto">
-          <NavLink
-            to="/notes"
-            onClick={handleNavClick}
-            className={getLinkClass}
-            title="My Notes"
-          >
-            <PiNotebookLight size={20} className="shrink-0" />
-            {showLabels && (
-              <span className="text-sm flex-1 truncate">My Notes</span>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/todos"
-            onClick={handleNavClick}
-            className={getLinkClass}
-            title="My To-do"
-          >
-            <LuListTodo size={20} className="shrink-0" />
-            {showLabels && (
-              <span className="text-sm flex-1 truncate">My To-do</span>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/journals"
-            onClick={handleNavClick}
-            className={getLinkClass}
-            title="My Journals"
-          >
-            <LuPencilLine size={20} className="shrink-0" />
-            {showLabels && (
-              <span className="text-sm flex-1 truncate">My Journals</span>
-            )}
-          </NavLink>
-
-          <NavLink
-            to="/trash"
-            onClick={handleNavClick}
-            className={getLinkClass}
-            title="Trash"
-          >
-            <LuTrash2 size={20} className="shrink-0" />
-            {showLabels && (
-              <span className="text-sm flex-1 truncate">Trash</span>
-            )}
-          </NavLink>
-
-          {/* FOLDERS SECTION */}
-          <div className="px-3 py-2">
-            {showLabels && (
-              <div className="flex items-center justify-between text-zinc-400 font-medium text-xs">
-                <button
-                  type="button"
-                  onClick={toggleFoldersOpen}
-                  className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
-                >
-                  <GoChevronDown
-                    size={14}
-                    className={`transition-transform duration-200 ${
-                      isFoldersOpen ? "rotate-0" : "-rotate-90"
-                    }`}
-                  />
-                  <span>FOLDERS</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOpenCreateFolderModal}
-                  className="p-1 rounded hover:bg-zinc-900/50 hover:text-white transition-colors"
-                  title="New folder"
-                >
-                  <GoPlus size={14} />
-                </button>
-              </div>
-            )}
-
-            <div
-              className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
-                isFoldersOpen || collapsed
-                  ? "grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0"
+        {/* Scrollable Middle Container */}
+        <div className="flex-1 overflow-y-auto min-h-0 py-2">
+          {/* Search Trigger */}
+          <div className="px-3 mb-2">
+            <button
+              type="button"
+              onClick={() => {
+                const searchModal = document.getElementById("searchModal");
+                if (
+                  searchModal &&
+                  typeof searchModal.showModal === "function"
+                ) {
+                  searchModal.showModal();
+                }
+                handleNavClick();
+              }}
+              className={`relative flex items-center rounded-md bg-zinc-700 hover:bg-zinc-900 text-sm text-zinc-400 transition-colors duration-200 w-full pl-9 pr-4 py-2 text-left ${
+                collapsed
+                  ? "md:w-10 md:h-10 md:justify-center md:mx-auto md:p-0"
+                  : ""
               }`}
             >
-              <div className="overflow-hidden">
-                <ul className="mt-2 space-y-1">
-                  {folders.map((folder) => {
-                    const id = folder.id || folder._id;
-                    return (
-                      <li
-                        key={id}
-                        onContextMenu={(e) =>
-                          handleContextMenu(e, folder, "folder")
-                        }
-                      >
-                        <NavLink
-                          to={`/folders/${id}`}
-                          onClick={handleNavClick}
-                          className={getItemLinkClass}
-                          title={folder.name}
-                        >
-                          <LuFolder
-                            size={15}
-                            className="shrink-0"
-                            style={{
-                              color:
-                                getFolderColor(folder.id || folder._id) ||
-                                folder.color ||
-                                folder.folderColor ||
-                                "#3b82f6",
-                            }}
-                          />
-                          {showLabels && (
-                            <span className="truncate flex-1 text-zinc-400 text-xs">
-                              {folder.name}
-                            </span>
-                          )}
-                        </NavLink>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
+              <IoSearch
+                className={`text-zinc-400 text-lg shrink-0 ${
+                  collapsed ? "absolute left-3 md:static" : "absolute left-3"
+                }`}
+              />
+              {showLabels && <span>Search notes...</span>}
+            </button>
           </div>
 
-          {/* TAGS SECTION */}
-          <div className="px-3 py-2">
-            {showLabels && (
-              <div className="flex items-center justify-between text-zinc-400 font-medium text-xs">
-                <button
-                  type="button"
-                  onClick={toggleTagsOpen}
-                  className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
-                >
-                  <GoChevronDown
-                    size={14}
-                    className={`transition-transform duration-200 ${
-                      isTagsOpen ? "rotate-0" : "-rotate-90"
-                    }`}
-                  />
-                  <span>TAGS</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOpenCreateTagModal}
-                  className="p-1 rounded hover:bg-zinc-900/50 hover:text-white transition-colors"
-                  title="New tag"
-                >
-                  <GoPlus size={14} />
-                </button>
-              </div>
-            )}
-
-            <div
-              className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
-                isTagsOpen || collapsed
-                  ? "grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0"
-              }`}
-            >
-              <div className="overflow-hidden">
-                <ul className="mt-2 space-y-1">
-                  {tags.map((t) => {
-                    const id = t.id || t._id;
-                    const label =
-                      t.tag || t.tagName || t.name || "Untitled Tag";
-
-                    return (
-                      <li
-                        key={id}
-                        onContextMenu={(e) => handleContextMenu(e, t, "tag")}
-                      >
-                        <NavLink
-                          to={`/tags/${id}`}
-                          onClick={handleNavClick}
-                          className={getItemLinkClass}
-                          title={label}
-                        >
-                          <LuTag
-                            size={13}
-                            className="shrink-0"
-                            style={{
-                              color: getTagColor(id) || t.color || "#3b82f6",
-                            }}
-                          />
-                          {showLabels && (
-                            <span className="truncate flex-1 text-zinc-400 text-xs">
-                              {label}
-                            </span>
-                          )}
-                        </NavLink>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Admin Link */}
-          {user?.role === "ADMIN" && (
+          {/* Nav Items */}
+          <div className="px-3 space-y-1">
             <NavLink
-              to="/admin"
+              to="/notes"
               onClick={handleNavClick}
               className={getLinkClass}
-              title="Admin"
+              title="My Notes"
             >
-              <RiShieldUserLine size={20} className="shrink-0" />
+              <PiNotebookLight size={20} className="shrink-0" />
               {showLabels && (
-                <span className="text-sm flex-1 truncate">Admin</span>
+                <span className="text-sm flex-1 truncate">My Notes</span>
               )}
             </NavLink>
-          )}
+
+            <NavLink
+              to="/todos"
+              onClick={handleNavClick}
+              className={getLinkClass}
+              title="My To-do"
+            >
+              <LuListTodo size={20} className="shrink-0" />
+              {showLabels && (
+                <span className="text-sm flex-1 truncate">My To-do</span>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/journals"
+              onClick={handleNavClick}
+              className={getLinkClass}
+              title="My Journals"
+            >
+              <LuPencilLine size={20} className="shrink-0" />
+              {showLabels && (
+                <span className="text-sm flex-1 truncate">My Journals</span>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/trash"
+              onClick={handleNavClick}
+              className={getLinkClass}
+              title="Trash"
+            >
+              <LuTrash2 size={20} className="shrink-0" />
+              {showLabels && (
+                <span className="text-sm flex-1 truncate">Trash</span>
+              )}
+            </NavLink>
+
+            {/* FOLDERS SECTION */}
+            <div className="py-2">
+              {showLabels && (
+                <div className="flex items-center justify-between text-zinc-400 font-medium text-xs px-3">
+                  <button
+                    type="button"
+                    onClick={toggleFoldersOpen}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
+                  >
+                    <GoChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${
+                        isFoldersOpen ? "rotate-0" : "-rotate-90"
+                      }`}
+                    />
+                    <span>FOLDERS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateFolderModal}
+                    className="p-1 rounded hover:bg-zinc-900/50 hover:text-white transition-colors"
+                    title="New folder"
+                  >
+                    <GoPlus size={14} />
+                  </button>
+                </div>
+              )}
+
+              <div
+                className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                  isFoldersOpen || collapsed
+                    ? "grid-rows-[1fr] opacity-100"
+                    : "grid-rows-[0fr] opacity-0"
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <ul className="mt-1 space-y-1 px-1">
+                    {folders.map((folder) => {
+                      const id = folder.id || folder._id;
+                      return (
+                        <li
+                          key={id}
+                          onContextMenu={(e) =>
+                            handleContextMenu(e, folder, "folder")
+                          }
+                        >
+                          <NavLink
+                            to={`/folders/${id}`}
+                            onClick={handleNavClick}
+                            className={getItemLinkClass}
+                            title={folder.name}
+                          >
+                            <LuFolder
+                              size={15}
+                              className="shrink-0"
+                              style={{
+                                color:
+                                  getFolderColor(id) ||
+                                  folder.color ||
+                                  folder.folderColor ||
+                                  "#3b82f6",
+                              }}
+                            />
+                            {showLabels && (
+                              <span className="truncate flex-1 text-zinc-400 text-xs">
+                                {folder.name}
+                              </span>
+                            )}
+                          </NavLink>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* TAGS SECTION */}
+            <div className="py-2">
+              {showLabels && (
+                <div className="flex items-center justify-between text-zinc-400 font-medium text-xs px-3">
+                  <button
+                    type="button"
+                    onClick={toggleTagsOpen}
+                    className="flex items-center gap-1.5 hover:text-white transition-colors py-1"
+                  >
+                    <GoChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${
+                        isTagsOpen ? "rotate-0" : "-rotate-90"
+                      }`}
+                    />
+                    <span>TAGS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateTagModal}
+                    className="p-1 rounded hover:bg-zinc-900/50 hover:text-white transition-colors"
+                    title="New tag"
+                  >
+                    <GoPlus size={14} />
+                  </button>
+                </div>
+              )}
+
+              <div
+                className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                  isTagsOpen || collapsed
+                    ? "grid-rows-[1fr] opacity-100"
+                    : "grid-rows-[0fr] opacity-0"
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <ul className="mt-1 space-y-1 px-1">
+                    {tags.map((t) => {
+                      const id = t.id || t._id;
+                      const label =
+                        t.tag || t.tagName || t.name || "Untitled Tag";
+
+                      return (
+                        <li
+                          key={id}
+                          onContextMenu={(e) => handleContextMenu(e, t, "tag")}
+                        >
+                          <NavLink
+                            to={`/tags/${id}`}
+                            onClick={handleNavClick}
+                            className={getItemLinkClass}
+                            title={label}
+                          >
+                            <LuTag
+                              size={13}
+                              className="shrink-0"
+                              style={{
+                                color: getTagColor(id) || t.color || "#3b82f6",
+                              }}
+                            />
+                            {showLabels && (
+                              <span className="truncate flex-1 text-zinc-400 text-xs">
+                                {label}
+                              </span>
+                            )}
+                          </NavLink>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin Link */}
+            {user?.role === "ADMIN" && (
+              <NavLink
+                to="/admin"
+                onClick={handleNavClick}
+                className={getLinkClass}
+                title="Admin"
+              >
+                <RiShieldUserLine size={20} className="shrink-0" />
+                {showLabels && (
+                  <span className="text-sm flex-1 truncate">Admin</span>
+                )}
+              </NavLink>
+            )}
+          </div>
         </div>
 
-        {/* User Footer with Dynamic Avatar */}
-        <div className="p-3 border-t border-zinc-700">
+        {/* User Footer */}
+        <div className="p-3 border-t border-zinc-700 bg-zinc-800 shrink-0">
           <Link
             to="/settings"
             onClick={handleNavClick}
-            className={`flex items-center gap-3 rounded-md hover:bg-zinc-800/60 transition-colors text-zinc-200 ${
+            className={`flex items-center gap-3 rounded-md hover:bg-zinc-700/60 transition-colors text-zinc-200 ${
               collapsed ? "md:justify-center md:p-2 p-2" : "p-2"
             }`}
             title="Settings"
@@ -557,7 +594,7 @@ export default function Sidebar({ onCloseMobile }) {
                 </div>
                 <LuSettings
                   size={18}
-                  className={`text-zinc-400 shrink-0 hover:rotate-90 duration-200 hover:text-white`}
+                  className="text-zinc-400 shrink-0 hover:rotate-90 transition-transform duration-200 hover:text-white"
                 />
               </>
             )}
@@ -565,10 +602,10 @@ export default function Sidebar({ onCloseMobile }) {
         </div>
       </nav>
 
-      {/* Shared Context Menu */}
+      {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg py-1 text-sm"
+          className="fixed z-50 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg py-1 text-sm select-none"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -589,7 +626,7 @@ export default function Sidebar({ onCloseMobile }) {
         </div>
       )}
 
-      {/* Folder Modals */}
+      {/* Modals */}
       <FolderModal
         isOpen={isFolderModalOpen}
         onClose={() => setIsFolderModalOpen(false)}
@@ -605,7 +642,6 @@ export default function Sidebar({ onCloseMobile }) {
         onConfirm={handleConfirmFolderDelete}
       />
 
-      {/* Tag Modal */}
       <TagModal
         isOpen={isTagModalOpen}
         onClose={() => setIsTagModalOpen(false)}
