@@ -106,6 +106,7 @@ export default function NoteEditor({
   const [isEditorsModalOpen, setIsEditorsModalOpen] = useState(false);
   const [editorEmailInput, setEditorEmailInput] = useState("");
   const [editorActionLoading, setEditorActionLoading] = useState(false);
+  const [editorAction, setEditorAction] = useState(null);
 
   const [folders, setFolders] = useState([]);
   const [folderId, setFolderId] = useState("");
@@ -291,7 +292,7 @@ export default function NoteEditor({
     e.preventDefault();
     if (!editorEmailInput.trim() || !noteId) return;
 
-    setEditorActionLoading(true);
+    setEditorAction({ type: "add" });
     try {
       const res = await addEditor(noteId, editorEmailInput.trim(), accessToken);
       toast.success(res?.message || "Editor added successfully");
@@ -304,14 +305,14 @@ export default function NoteEditor({
       console.error("Failed to add editor:", err);
       toast.error(err?.response?.data?.error || "Failed to add editor");
     } finally {
-      setEditorActionLoading(false);
+      setEditorAction(null);
     }
   };
 
   const handleRemoveEditor = async (emailToRemove) => {
     if (!noteId) return;
 
-    setEditorActionLoading(true);
+    setEditorAction({ type: "remove", email: emailToRemove });
     try {
       const res = await removeEditor(noteId, emailToRemove, accessToken);
       toast.success(res?.message || "Editor removed");
@@ -325,7 +326,7 @@ export default function NoteEditor({
       console.error("Failed to remove editor:", err);
       toast.error(err?.response?.data?.error || "Failed to remove editor");
     } finally {
-      setEditorActionLoading(false);
+      setEditorAction(null);
     }
   };
 
@@ -720,9 +721,65 @@ export default function NoteEditor({
               <LuUsers size={13} /> Editors
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-zinc-300 font-medium">
-                {editors.length} {editors.length === 1 ? "editor" : "editors"}
-              </span>
+              {/* Hover Wrapper */}
+              <div className="relative group inline-block">
+                <span className="text-zinc-300 font-medium cursor-pointer underline decoration-zinc-700 underline-offset-4 decoration-dotted hover:text-white transition-colors">
+                  {editors.length} {editors.length === 1 ? "editor" : "editors"}
+                </span>
+
+                {/* Invisible bridge container to prevent hover flickering */}
+                <div className="absolute left-0 top-full pt-1.5 hidden group-hover:block z-50">
+                  {/* Popover / Hover Card */}
+                  <div className="w-56 p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl text-xs select-none">
+                    <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                      Note Editors
+                    </p>
+
+                    {editors.length === 0 ? (
+                      <p className="text-zinc-500 italic">
+                        No additional editors
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                        {editors.map((ed) => {
+                          const edId = ed.id || ed._id || ed.email || ed.image;
+                          return (
+                            <div
+                              key={edId}
+                              className="flex flex-col border-b border-zinc-800/60 pb-1 last:border-none last:pb-0"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
+                                  {ed.image ? (
+                                    <img
+                                      src={ed.image}
+                                      alt={ed.name || "Editor avatar"}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-[10px] font-semibold text-zinc-400 uppercase">
+                                      {(ed.name || ed.email || "U").charAt(0)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-zinc-200 font-medium truncate">
+                                    {ed.name || "User"}
+                                  </span>
+                                  <span className="text-zinc-500 text-[10px] truncate">
+                                    {ed.email}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {!isTrash && (
                 <button
                   type="button"
@@ -989,17 +1046,20 @@ export default function NoteEditor({
             <form onSubmit={handleAddEditor} className="mt-4 flex gap-2">
               <input
                 type="email"
+                required
+                autoFocus
                 placeholder="User email address..."
                 value={editorEmailInput}
                 onChange={(e) => setEditorEmailInput(e.target.value)}
-                className="flex-1 bg-zinc-950 border border-zinc-800 focus:border-zinc-700 text-xs rounded-md px-3 py-2 text-zinc-200 outline-none placeholder-zinc-600"
+                disabled={!!editorAction}
+                className="flex-1 bg-zinc-950 border border-zinc-800 focus:border-zinc-700 disabled:opacity-50 text-xs rounded-md px-3 py-2 text-zinc-200 outline-none placeholder-zinc-600 transition-colors"
               />
               <button
                 type="submit"
-                disabled={editorActionLoading || !editorEmailInput.trim()}
-                className="px-3 py-2 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 font-medium text-xs rounded-md transition-colors disabled:opacity-50 shrink-0"
+                disabled={!!editorAction || !editorEmailInput.trim()}
+                className="px-3 py-2 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 font-medium text-xs rounded-md transition-colors disabled:opacity-50 shrink-0 min-w-[70px]"
               >
-                {editorActionLoading ? "Adding..." : "Add"}
+                {editorAction?.type === "add" ? "Adding..." : "Add"}
               </button>
             </form>
 
@@ -1015,6 +1075,10 @@ export default function NoteEditor({
               ) : (
                 editors.map((ed) => {
                   const edId = ed.id || ed._id || ed.email;
+                  const isRemovingThis =
+                    editorAction?.type === "remove" &&
+                    editorAction?.email === ed.email;
+
                   return (
                     <div
                       key={edId}
@@ -1028,14 +1092,21 @@ export default function NoteEditor({
                           {ed.email}
                         </span>
                       </div>
+
                       <button
                         type="button"
                         onClick={() => handleRemoveEditor(ed.email)}
-                        disabled={editorActionLoading}
-                        className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-900 transition-colors disabled:opacity-50 shrink-0"
+                        disabled={!!editorAction}
+                        className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-900 transition-colors disabled:opacity-50 shrink-0 flex items-center gap-1"
                         title="Revoke access"
                       >
-                        <LuX size={14} />
+                        {isRemovingThis ? (
+                          <span className="text-[11px] text-red-400 animate-pulse font-medium">
+                            Removing...
+                          </span>
+                        ) : (
+                          <LuX size={14} />
+                        )}
                       </button>
                     </div>
                   );
