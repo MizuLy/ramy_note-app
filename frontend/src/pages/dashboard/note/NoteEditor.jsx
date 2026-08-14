@@ -742,34 +742,38 @@ export default function NoteEditor({
                     ) : (
                       <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                         {editors.map((ed) => {
-                          const edId = ed.id || ed._id || ed.email || ed.image;
+                          const edId = ed.id || ed._id || ed.email;
+                          // Resolve image URL across potential API payload shapes
+                          const avatarUrl =
+                            ed.image || ed.avatar || ed.picture || null;
+
                           return (
                             <div
                               key={edId}
-                              className="flex flex-col border-b border-zinc-800/60 pb-1 last:border-none last:pb-0"
+                              className="flex items-center gap-2 border-b border-zinc-800/60 pb-1.5 pt-0.5 last:border-none last:pb-0"
                             >
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
-                                  {ed.image ? (
-                                    <img
-                                      src={ed.image}
-                                      alt={ed.name || "Editor avatar"}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <span className="text-[10px] font-semibold text-zinc-400 uppercase">
-                                      {(ed.name || ed.email || "U").charAt(0)}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-zinc-200 font-medium truncate">
-                                    {ed.name || "User"}
+                              {/* Avatar / Fallback Initial */}
+                              <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
+                                {avatarUrl ? (
+                                  <img
+                                    src={avatarUrl}
+                                    alt={ed.name || "Editor"}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-zinc-400 uppercase">
+                                    {(ed.name || ed.email || "U").charAt(0)}
                                   </span>
-                                  <span className="text-zinc-500 text-[10px] truncate">
-                                    {ed.email}
-                                  </span>
-                                </div>
+                                )}
+                              </div>
+
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-zinc-200 font-medium truncate">
+                                  {ed.name || "User"}
+                                </span>
+                                <span className="text-zinc-500 text-[10px] truncate">
+                                  {ed.email}
+                                </span>
                               </div>
                             </div>
                           );
