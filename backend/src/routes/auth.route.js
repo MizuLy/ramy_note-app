@@ -71,6 +71,7 @@ router.post(
 router.post(
   "/reset-password",
   validateRequest(resetPasswordSchema),
+  authLimiter,
   resetPassword,
 );
 
