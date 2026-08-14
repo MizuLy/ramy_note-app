@@ -161,7 +161,7 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 
 - **note/** — `Note.jsx` (container: two-pane list + editor, route-based selection), `Trash.jsx` (same two-pane layout for `/trash`, wires `NoteList` + `NoteEditor` with `isTrash`), `NoteList.jsx` (search, time filters, pin, trash actions — sorts by `updatedAt || createdAt`), `NoteEditor.jsx` (TipTap rich text editor).
   - **Autosave**: `NoteEditor` debounces saves by 800ms via refs (`titleRef`, `isPinnedRef`, `selectedTagsRef`, `activeNoteIdRef`) so stale closures don't clobber newer content. Editor content is stored as HTML in `notes.body`. On save it reads back `res.data.data.updatedAt` to update the "Last Modified" timestamp.
-  - **Sharing**: `NoteEditor` renders a metadata section with owner ("Created by", from `getNoteId`'s included `user`), an editors count + **Manage** button (owner-only, hidden in trash mode) that opens a modal to add/remove editors by email via `addEditor`/`removeEditor`.
+  - **Sharing**: `NoteEditor` renders a metadata section with owner ("Created by", from `getNoteId`'s included `user`), an editors count + **Manage** button (owner-only, hidden in trash mode) that opens a modal to add/remove editors by email via `addEditor`/`removeEditor`. `getNoteId` includes `image` on both `user` and `editors`. Hovering the editor count opens a popover listing each editor with their avatar (`avatarUrl = ed.image || ed.avatar || ed.picture` fallback). Add/remove actions track per-editor loading state via the `editorAction` object (`{type: "add"}` / `{type: "remove", email}`): the email input, Add button, and all remove buttons are disabled while an action is in flight, and the editor being removed shows a "Removing..." state.
   - **Trash mode**: `NoteEditor` takes an `isTrash` prop — the toolbar hides pin / folder / new-note actions and instead offers Restore + Delete Forever (permanent delete is confirmed via `ConfirmModal`). Trash notes are fetched with `getNoteId(id, token, { trash: true })`.
   - Folder/tag filtering on the list is done **client-side** after fetching all notes (with `?trash=true` passed for the trash view).
 - **todo/** — `Todo.jsx` fully implemented (add, toggle, delete, filter tabs, optimistic UI with revert).
@@ -179,6 +179,7 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 ### Styling
 
 - Tailwind with a **custom zinc palette** (950/900/800/700/500/400/200/100) backed by CSS variables in `src/index.css`; arbitrary values like `zinc-600`, `zinc-300` are **not** defined and should be avoided.
+- The global `user-select: none` rule in `src/index.css` is **disabled** (commented out), so app text is user-selectable.
 - daisyUI themes: `light`, `dark`, `black`. Fonts: Belanosima, Instrument Sans, Josefin Sans, Noto Sans Khmer, Comfortaa.
 - Icons: `react-icons` — `Lu*` (lucide) is the dominant family; some `Io5`, `Pi`, `Go`, `Ri` icons appear in the Sidebar. `react-hot-toast` is the toast library.
 

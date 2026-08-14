@@ -63,7 +63,7 @@ Both apps must run together — backend CORS allows whatever `FRONTEND_URL` is s
 
 - **API routes** are mounted under `/api`; responses vary per endpoint (`data`, `result`, `folder`, `journal`) — unwrap defensively (`res?.data || res?.result || res`).
 - **Auth**: access token (15m, Bearer) + httpOnly refresh token cookie (7d; `sameSite: strict` in dev, `none` + secure in prod). Frontend refreshes only once at boot.
-- **Note sharing**: owners can add/remove editors (`POST`/`DELETE /api/notes/:id/editors`, or the NoteEditor "Manage" button); editors get read + edit access, while pin/trash/restore/permanent-delete stay owner-only.
+- **Note sharing**: owners can add/remove editors (`POST`/`DELETE /api/notes/:id/editors`, or the NoteEditor "Manage" button); editors get read + edit access, while pin/trash/restore/permanent-delete stay owner-only. Hover the editor count to preview the editor list (avatars included).
 - **Forgot/reset password**: `POST /api/auth/forgot-password` emails a 30-min reset link (`FRONTEND_URL/reset-password?token=...`) via Brevo; `POST /api/auth/reset-password` consumes the single-use token.
 - **Notes & Journals** use soft delete (`isDeleted`/`deletedAt`) with trash + restore + permanent-delete endpoints.
 - **First registered user** automatically becomes `ADMIN`.
