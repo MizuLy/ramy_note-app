@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import SearchModal from "../components/modals/SearchModal";
 import { LuMenu } from "react-icons/lu";
+import ramyLogo from "../assets/ram.png";
 
 export default function DashboardLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -19,8 +20,13 @@ export default function DashboardLayout() {
         >
           <LuMenu size={20} />
         </button>
-        <span className="text-xs font-bold tracking-wider text-zinc-300 uppercase">
-          Note App
+        <span className="inline-flex items-center gap-2 text-xs font-bold tracking-wider text-zinc-300 uppercase select-none">
+          <img
+            src={ramyLogo}
+            alt="Ramy"
+            className="w-5 h-5 rounded-full object-cover"
+          />
+          Ramy
         </span>
         <div className="w-8" /> {/* Spacer for centering title */}
       </div>
