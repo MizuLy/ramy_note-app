@@ -20,27 +20,39 @@ export default function Trash() {
     navigate("/trash");
   };
 
+  // Clears the selected note so mobile shows the list pane again.
+  const handleBack = () => {
+    navigate("/trash");
+  };
+
   useEffect(() => {
     document.title = "Trash | Ramy";
   }, []);
 
   return (
-    <div className="flex h-screen w-full">
-      <NoteList
-        selectedNoteId={id}
-        onSelectNote={handleSelectedNote}
-        refreshKey={refreshKey}
-        isTrash={true}
-        onRefresh={handleRefresh}
-      />
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* List pane: full width on mobile when nothing is selected, hidden once a note is open. Always visible side-by-side from sm breakpoint up. */}
+      <div className={`${id ? "hidden" : "flex"} sm:flex w-full sm:w-auto`}>
+        <NoteList
+          selectedNoteId={id}
+          onSelectNote={handleSelectedNote}
+          refreshKey={refreshKey}
+          isTrash={true}
+          onRefresh={handleRefresh}
+        />
+      </div>
 
-      <NoteEditor
-        noteId={id}
-        onSelectNote={handleSelectedNote}
-        onNoteUpdated={handleRefresh}
-        onTrashed={handleTrashed}
-        isTrash={true}
-      />
+      {/* Editor pane: hidden on mobile until a note is selected, always visible from sm breakpoint up. */}
+      <div className={`${id ? "flex" : "hidden"} sm:flex flex-1 min-w-0`}>
+        <NoteEditor
+          noteId={id}
+          onSelectNote={handleSelectedNote}
+          onNoteUpdated={handleRefresh}
+          onTrashed={handleTrashed}
+          onBack={handleBack}
+          isTrash={true}
+        />
+      </div>
     </div>
   );
 }

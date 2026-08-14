@@ -43,6 +43,19 @@ export default function Notes() {
     }
   };
 
+  // Clears the selected note so mobile shows the list pane again.
+  const handleBack = () => {
+    if (isTrash) {
+      navigate("/trash");
+    } else if (folderId) {
+      navigate(`/folders/${folderId}`);
+    } else if (tagId) {
+      navigate(`/tags/${tagId}`);
+    } else {
+      navigate("/notes");
+    }
+  };
+
   const handleRefresh = () => setRefreshKey((prev) => prev + 1);
 
   const handleTrashed = () => {
@@ -126,28 +139,39 @@ export default function Notes() {
   }, [tagId, accessToken]);
 
   return (
-    <div className="flex h-screen w-full">
-      <NoteList
-        selectedNoteId={selectedNoteId}
-        onSelectNote={handleSelectedNote}
-        refreshKey={refreshKey}
-        folderId={isTrash ? undefined : folderId}
-        folderName={folderName}
-        tagId={isTrash ? undefined : tagId}
-        tagLabel={tagLabel}
-        isTrash={isTrash}
-        onRefresh={handleRefresh}
-      />
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* List pane: full width on mobile when nothing is selected, hidden once a note is open. Always visible side-by-side from sm breakpoint up. */}
+      <div
+        className={`${selectedNoteId ? "hidden" : "flex"} sm:flex w-full sm:w-auto`}
+      >
+        <NoteList
+          selectedNoteId={selectedNoteId}
+          onSelectNote={handleSelectedNote}
+          refreshKey={refreshKey}
+          folderId={isTrash ? undefined : folderId}
+          folderName={folderName}
+          tagId={isTrash ? undefined : tagId}
+          tagLabel={tagLabel}
+          isTrash={isTrash}
+          onRefresh={handleRefresh}
+        />
+      </div>
 
-      <NoteEditor
-        noteId={selectedNoteId}
-        onSelectNote={handleSelectedNote}
-        onNoteUpdated={handleRefresh}
-        onTrashed={handleTrashed}
-        defaultFolderId={isTrash ? "" : folderId || ""}
-        defaultTagName={isTrash ? "" : tagLabel || ""}
-        isTrash={isTrash}
-      />
+      {/* Editor pane: hidden on mobile until a note is selected, always visible from sm breakpoint up. */}
+      <div
+        className={`${selectedNoteId ? "flex" : "hidden"} sm:flex flex-1 min-w-0`}
+      >
+        <NoteEditor
+          noteId={selectedNoteId}
+          onSelectNote={handleSelectedNote}
+          onNoteUpdated={handleRefresh}
+          onTrashed={handleTrashed}
+          onBack={handleBack}
+          defaultFolderId={isTrash ? "" : folderId || ""}
+          defaultTagName={isTrash ? "" : tagLabel || ""}
+          isTrash={isTrash}
+        />
+      </div>
     </div>
   );
 }

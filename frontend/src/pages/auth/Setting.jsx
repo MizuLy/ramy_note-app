@@ -198,7 +198,7 @@ export default function Settings() {
 
   return (
     <div className="flex-1 h-screen overflow-y-auto bg-zinc-950 text-white">
-      <div className="max-w-3xl mx-auto px-8 py-10 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 sm:px-8 py-6 sm:py-10 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold mb-1">Settings</h1>
           <p className="text-sm text-zinc-500">
@@ -207,7 +207,7 @@ export default function Settings() {
         </div>
 
         {/* Profile Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
               <LuUserRound size={20} />
@@ -259,7 +259,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">
                 Display name
@@ -269,7 +269,7 @@ export default function Settings() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-md bg-zinc-800 border border-zinc-700 text-sm outline-none focus:border-zinc-500"
+                  className="flex-1 min-w-0 px-3 py-2 rounded-md bg-zinc-800 border border-zinc-700 text-sm outline-none focus:border-zinc-500"
                 />
                 <button
                   onClick={handleSaveName}
@@ -299,13 +299,13 @@ export default function Settings() {
               <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">
                 Confirm password to update email
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="password"
                   value={emailPassword}
                   onChange={(e) => setEmailPassword(e.target.value)}
                   placeholder="Current password"
-                  className="flex-1 px-3 py-2 rounded-md bg-zinc-800 border border-zinc-700 text-sm outline-none focus:border-zinc-500"
+                  className="flex-1 min-w-0 px-3 py-2 rounded-md bg-zinc-800 border border-zinc-700 text-sm outline-none focus:border-zinc-500"
                 />
                 <button
                   onClick={handleChangeEmail}
@@ -320,7 +320,7 @@ export default function Settings() {
         </div>
 
         {/* Security Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
               <LuKeyRound size={20} />
@@ -333,7 +333,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">
                 Current password
@@ -372,14 +372,14 @@ export default function Settings() {
           <button
             onClick={handleChangePassword}
             disabled={passwordSaving || !currentPassword || !newPassword}
-            className="mt-4 px-4 py-2 rounded-md bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-zinc-300 disabled:opacity-50 transition-colors"
+            className="mt-4 w-full sm:w-auto px-4 py-2 rounded-md bg-zinc-100 text-zinc-900 text-sm font-medium hover:bg-zinc-300 disabled:opacity-50 transition-colors"
           >
             {passwordSaving ? "Updating..." : "Update password"}
           </button>
         </div>
 
         {/* Appearance Card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
               <MdOutlineColorLens size={20} />
@@ -395,7 +395,7 @@ export default function Settings() {
           <p className="text-xs uppercase tracking-wide text-zinc-500 mb-3">
             Theme
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {themeOptions.map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
@@ -403,7 +403,7 @@ export default function Settings() {
                   setTheme(value);
                   toast.success(`Theme set to ${label}`);
                 }}
-                className={`relative flex flex-col items-center gap-2 py-5 rounded-lg border transition-colors ${
+                className={`relative flex flex-col items-center gap-2 py-4 sm:py-5 rounded-lg border transition-colors ${
                   theme === value
                     ? "border-zinc-400 bg-zinc-800"
                     : "border-zinc-800 hover:border-zinc-700"
@@ -422,7 +422,7 @@ export default function Settings() {
         </div>
 
         {/* Account Card */}
-        <div className="bg-zinc-900 border border-red-900/40 rounded-lg p-6">
+        <div className="bg-zinc-900 border border-red-900/40 rounded-lg p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-9 h-9 rounded-md bg-red-950/40 flex items-center justify-center shrink-0">
               <LuLogOut size={16} className="text-red-400" />
@@ -435,7 +435,7 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between py-3 border-t border-zinc-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 border-t border-zinc-800">
             <div>
               <p className="text-sm font-medium">Sign out</p>
               <p className="text-xs text-zinc-500">
@@ -444,14 +444,14 @@ export default function Settings() {
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-zinc-800 hover:bg-zinc-700 text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-md bg-zinc-800 hover:bg-zinc-700 text-sm font-medium transition-colors shrink-0"
             >
               <LuLogOut size={14} />
               Sign out
             </button>
           </div>
 
-          <div className="flex items-center justify-between py-3 border-t border-zinc-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-3 border-t border-zinc-800">
             <div>
               <p className="text-sm font-medium text-red-400">Delete account</p>
               <p className="text-xs text-zinc-500">
@@ -459,7 +459,7 @@ export default function Settings() {
                 undone.
               </p>
             </div>
-            <button className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors">
+            <button className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors shrink-0">
               <LuTrash2 size={14} />
               Delete
             </button>

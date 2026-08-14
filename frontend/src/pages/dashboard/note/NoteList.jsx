@@ -257,7 +257,7 @@ export default function NoteList({
   };
 
   return (
-    <div className="w-80 h-screen border-r border-zinc-800 bg-zinc-950 flex flex-col select-none shrink-0">
+    <div className="w-full sm:w-80 h-screen border-r border-zinc-800 bg-zinc-950 flex flex-col select-none shrink-0">
       {/* Header */}
       <div className="p-4 border-b border-zinc-800/80 space-y-3">
         <div className="flex items-center justify-between">

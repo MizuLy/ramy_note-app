@@ -135,15 +135,15 @@ export default function Todo() {
 
   return (
     <div className="flex-1 h-screen flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden">
-      <div className="w-full max-w-2xl mx-auto flex flex-col h-full px-4 pt-6 pb-4">
+      <div className="w-full max-w-2xl mx-auto flex flex-col h-full px-3 sm:px-4 pt-4 sm:pt-6 pb-4">
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-zinc-800/80">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-zinc-800/80">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-300">
+            <div className="p-2 bg-zinc-900 border border-zinc-800 rounded-lg text-zinc-300 shrink-0">
               <LuListTodo size={18} />
             </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
                 To-do List
               </h1>
               <p className="text-xs text-zinc-500">
@@ -153,7 +153,7 @@ export default function Todo() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center bg-zinc-900 border border-zinc-800/80 p-0.5 rounded-lg text-xs">
+          <div className="flex items-center bg-zinc-900 border border-zinc-800/80 p-0.5 rounded-lg text-xs self-start sm:self-auto">
             {["all", "active", "completed"].map((f) => (
               <button
                 key={f}
@@ -172,32 +172,35 @@ export default function Todo() {
         </div>
 
         {/* Create Form */}
-        <form onSubmit={handleAddTodo} className="mt-4 flex gap-2">
+        <form
+          onSubmit={handleAddTodo}
+          className="mt-4 flex flex-col sm:flex-row gap-2"
+        >
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Add a new task..."
-            className="flex-1 bg-zinc-900/60 border border-zinc-800 focus:border-zinc-700 text-sm text-white placeholder-zinc-600 rounded-md px-3 py-2 outline-none transition-colors"
+            className="flex-1 bg-zinc-900/60 border border-zinc-800 focus:border-zinc-700 text-sm text-white placeholder-zinc-600 rounded-md px-3 py-2 outline-none transition-colors min-w-0"
           />
 
-          <div className="relative flex items-center">
+          <div className="flex items-center gap-2">
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 rounded-md px-2.5 py-2 outline-none cursor-pointer hover:bg-zinc-800 transition-colors [color-scheme:dark]"
+              className="flex-1 sm:flex-initial bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 rounded-md px-2.5 py-2 outline-none cursor-pointer hover:bg-zinc-800 transition-colors [color-scheme:dark]"
             />
-          </div>
 
-          <button
-            type="submit"
-            disabled={!title.trim() || submitting}
-            className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 hover:bg-zinc-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-md transition-colors shrink-0"
-          >
-            <LuPlus size={14} />
-            <span>{submitting ? "Adding..." : "Add"}</span>
-          </button>
+            <button
+              type="submit"
+              disabled={!title.trim() || submitting}
+              className="flex items-center gap-1.5 px-3 py-2 bg-zinc-100 hover:bg-zinc-300 disabled:opacity-40 text-zinc-900 text-xs font-semibold rounded-md transition-colors shrink-0"
+            >
+              <LuPlus size={14} />
+              <span>{submitting ? "Adding..." : "Add"}</span>
+            </button>
+          </div>
         </form>
 
         {/* Task List */}
@@ -218,7 +221,7 @@ export default function Todo() {
               return (
                 <div
                   key={id}
-                  className={`group flex items-center justify-between p-3 rounded-lg border transition-all ${
+                  className={`group flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-3 rounded-lg border transition-all ${
                     isDone
                       ? "bg-zinc-900/20 border-zinc-900/80 text-zinc-500"
                       : "bg-zinc-900/50 border-zinc-800/80 hover:border-zinc-700/80 text-zinc-200"
@@ -246,7 +249,7 @@ export default function Todo() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-3 shrink-0 ml-8 sm:ml-0">
                     {todo.dueDate && (
                       <span className="flex items-center gap-1 text-[11px] text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
                         <LuCalendar size={11} />
@@ -257,7 +260,7 @@ export default function Todo() {
                     <button
                       type="button"
                       onClick={() => handleDeleteTodo(id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-rose-400 transition-all rounded"
+                      className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1 text-zinc-500 hover:text-rose-400 transition-all rounded"
                       title="Delete task"
                     >
                       <LuTrash2 size={14} />

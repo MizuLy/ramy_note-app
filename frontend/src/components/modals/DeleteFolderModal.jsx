@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { IoClose } from "react-icons/io5";
 import { LuTriangleAlert } from "react-icons/lu";
+import ModalPortal from "./ModalPortal";
 
 // Plain delete confirmation. If the folder still has notes in it, the
 // backend rejects the request and we show that error here instead of
@@ -29,10 +30,11 @@ export default function DeleteFolderModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={loading ? undefined : onClose}
-    >
+    <ModalPortal>
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        onClick={loading ? undefined : onClose}
+      >
       <div
         className="w-full max-w-sm bg-zinc-900 text-zinc-100 rounded-xl border border-zinc-800 p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -89,5 +91,6 @@ export default function DeleteFolderModal({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

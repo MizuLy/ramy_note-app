@@ -20,6 +20,7 @@ import toast from "react-hot-toast";
 import ConfirmModal from "../../../components/modals/ConfirmModal";
 
 import {
+  LuArrowLeft,
   LuPin,
   LuBold,
   LuItalic,
@@ -85,10 +86,11 @@ export default function NoteEditor({
   onNoteUpdated,
   onSelectNote,
   onTrashed,
+  onBack,
   defaultFolderId = "",
   isTrash = false,
 }) {
-  const { accessToken, user } = useAuth();
+  const { accessToken } = useAuth();
   const [title, setTitle] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -105,7 +107,6 @@ export default function NoteEditor({
   const [editors, setEditors] = useState([]);
   const [isEditorsModalOpen, setIsEditorsModalOpen] = useState(false);
   const [editorEmailInput, setEditorEmailInput] = useState("");
-  const [editorActionLoading, setEditorActionLoading] = useState(false);
   const [editorAction, setEditorAction] = useState(null);
 
   const [folders, setFolders] = useState([]);
@@ -189,10 +190,8 @@ export default function NoteEditor({
         accessToken,
       );
 
-      // Extract note data matching backend structure res.data.data
       const updatedNote = res?.data?.data || res?.data || res?.result || res;
 
-      // Instantly update the timestamp state
       if (updatedNote?.updatedAt) {
         setUpdatedAtRaw(updatedNote.updatedAt);
       }
@@ -332,12 +331,12 @@ export default function NoteEditor({
 
   // Tiptap Setup
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, Underline],
     content: "",
     editorProps: {
       attributes: {
         class:
-          "focus:outline-none min-h-[300px] text-sm text-zinc-200 leading-relaxed",
+          "focus:outline-none min-h-[300px] text-sm text-zinc-200 leading-relaxed [&_h1]:text-xl sm:[&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-2 [&_h2]:text-lg sm:[&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_h3]:text-base sm:[&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-zinc-700 [&_blockquote]:pl-3 [&_blockquote]:italic [&_code]:bg-zinc-800 [&_code]:px-1 [&_code]:rounded",
       },
     },
     onUpdate: ({ editor }) => {
@@ -426,7 +425,7 @@ export default function NoteEditor({
     return () => {
       cancelled = true;
     };
-  }, [noteId, accessToken, editor]);
+  }, [noteId, accessToken, editor, isTrash]);
 
   const handleCreateNew = async () => {
     setCreating(true);
@@ -534,7 +533,16 @@ export default function NoteEditor({
 
   if (!noteId) {
     return (
-      <div className="flex-1 h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-500 select-none">
+      <div className="flex-1 h-screen flex flex-col items-center justify-center bg-zinc-950 text-zinc-500 select-none p-4">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="sm:hidden mb-4 self-start flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+          >
+            <LuArrowLeft size={14} /> Back to notes
+          </button>
+        )}
         <p className="text-sm font-medium mb-3 text-zinc-400">
           No note selected
         </p>
@@ -561,21 +569,33 @@ export default function NoteEditor({
     <div className="flex-1 h-screen flex flex-col bg-zinc-950 text-zinc-200 overflow-hidden relative">
       <div className="w-full max-w-2xl mx-auto flex flex-col h-full">
         {/* Top action bar */}
-        <div className="px-4 pt-4 flex items-center justify-between gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border shrink-0 ${
-              saving
-                ? "text-zinc-300 border-zinc-700 bg-zinc-900"
-                : "text-zinc-500 border-zinc-800 bg-zinc-900/60"
-            }`}
-          >
-            {saving && (
-              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
+        <div className="px-3 sm:px-4 pt-3 sm:pt-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                title="Back to notes"
+                className="sm:hidden p-1.5 rounded-md border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+              >
+                <LuArrowLeft size={14} />
+              </button>
             )}
-            {savedLabel}
-          </span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] sm:text-xs font-medium border shrink-0 ${
+                saving
+                  ? "text-zinc-300 border-zinc-700 bg-zinc-900"
+                  : "text-zinc-500 border-zinc-800 bg-zinc-900/60"
+              }`}
+            >
+              {saving && (
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
+              )}
+              {savedLabel}
+            </span>
+          </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {!isTrash && (
               <>
                 {/* Folder selection dropdown */}
@@ -588,7 +608,7 @@ export default function NoteEditor({
                     value={folderId}
                     onChange={handleFolderChange}
                     title="Move to folder"
-                    className="appearance-none bg-transparent border border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs rounded-md pl-6 pr-2 py-1.5 outline-none cursor-pointer max-w-[110px]"
+                    className="appearance-none bg-transparent border border-zinc-800 hover:bg-zinc-800 text-zinc-300 text-xs rounded-md pl-6 pr-2 py-1.5 outline-none cursor-pointer max-w-[85px] sm:max-w-[110px] truncate"
                   >
                     <option value="" className="bg-zinc-900">
                       No folder
@@ -660,10 +680,12 @@ export default function NoteEditor({
               onClick={handleManualSave}
               disabled={saving}
               title="Save note"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 border border-zinc-800 hover:bg-zinc-800 text-zinc-200 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
             >
               <LuSave size={12} className={saving ? "animate-pulse" : ""} />
-              <span>{saving ? "Saving..." : "Save"}</span>
+              <span className="hidden sm:inline">
+                {saving ? "Saving..." : "Save"}
+              </span>
             </button>
 
             {!isTrash && (
@@ -671,17 +693,20 @@ export default function NoteEditor({
                 type="button"
                 onClick={handleCreateNew}
                 disabled={creating}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
+                title="New Note"
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50"
               >
                 <LuPlus size={12} />
-                <span>{creating ? "Creating..." : "New Note"}</span>
+                <span className="hidden sm:inline">
+                  {creating ? "Creating..." : "New Note"}
+                </span>
               </button>
             )}
           </div>
         </div>
 
         {/* Title input */}
-        <div className="px-4 pt-3">
+        <div className="px-3 sm:px-4 pt-3">
           <input
             type="text"
             value={title}
@@ -696,18 +721,18 @@ export default function NoteEditor({
               );
             }}
             placeholder="Untitled"
-            className="text-2xl font-extrabold bg-transparent text-white outline-none w-full placeholder-zinc-700 tracking-tight"
+            className="text-xl sm:text-2xl font-extrabold bg-transparent text-white outline-none w-full placeholder-zinc-700 tracking-tight"
           />
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-[11px] sm:text-xs text-zinc-500">
             {wordCount} {wordCount === 1 ? "word" : "words"} · {readTime}{" "}
             {readTime === 1 ? "min" : "min"} read
           </p>
         </div>
 
         {/* METADATA SECTION */}
-        <div className="px-4 pt-4 pb-2 space-y-2.5 text-xs text-zinc-400">
-          <div className="flex items-center gap-4">
-            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
+        <div className="px-3 sm:px-4 pt-3 sm:pt-4 pb-2 space-y-2 sm:space-y-2.5 text-xs text-zinc-400">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 text-[11px] sm:text-xs">
               <LuUser size={13} /> Created by
             </span>
             <div className="flex items-center gap-2 text-zinc-300 font-medium">
@@ -716,8 +741,8 @@ export default function NoteEditor({
           </div>
 
           {/* EDITORS ROW */}
-          <div className="flex items-center gap-4">
-            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 text-[11px] sm:text-xs">
               <LuUsers size={13} /> Editors
             </span>
             <div className="flex items-center gap-2">
@@ -727,10 +752,9 @@ export default function NoteEditor({
                   {editors.length} {editors.length === 1 ? "editor" : "editors"}
                 </span>
 
-                {/* Invisible bridge container to prevent hover flickering */}
+                {/* Popover / Hover Card */}
                 <div className="absolute left-0 top-full pt-1.5 hidden group-hover:block z-50">
-                  {/* Popover / Hover Card */}
-                  <div className="w-56 p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl text-xs select-none">
+                  <div className="w-52 sm:w-56 max-w-[calc(100vw-3rem)] p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl text-xs select-none">
                     <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
                       Note Editors
                     </p>
@@ -743,7 +767,6 @@ export default function NoteEditor({
                       <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                         {editors.map((ed) => {
                           const edId = ed.id || ed._id || ed.email;
-                          // Resolve image URL across potential API payload shapes
                           const avatarUrl =
                             ed.image || ed.avatar || ed.picture || null;
 
@@ -752,7 +775,6 @@ export default function NoteEditor({
                               key={edId}
                               className="flex items-center gap-2 border-b border-zinc-800/60 pb-1.5 pt-0.5 last:border-none last:pb-0"
                             >
-                              {/* Avatar / Fallback Initial */}
                               <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
                                 {avatarUrl ? (
                                   <img
@@ -788,7 +810,7 @@ export default function NoteEditor({
                 <button
                   type="button"
                   onClick={() => setIsEditorsModalOpen(true)}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:text-white text-zinc-400 text-xs font-medium transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:text-white text-zinc-400 text-[11px] sm:text-xs font-medium transition-colors"
                 >
                   <LuUserPlus size={11} /> Manage
                 </button>
@@ -796,8 +818,8 @@ export default function NoteEditor({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 text-[11px] sm:text-xs">
               <LuCalendar size={13} /> Last Modified
             </span>
             <span className="text-zinc-300 font-medium">
@@ -805,11 +827,11 @@ export default function NoteEditor({
             </span>
           </div>
 
-          <div className="flex items-start gap-4">
-            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 pt-1">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
+            <span className="w-24 text-zinc-500 flex items-center gap-1.5 shrink-0 pt-0.5 text-[11px] sm:text-xs">
               <LuTag size={13} /> Tags
             </span>
-            <div className="flex-1 flex flex-wrap items-center gap-1.5">
+            <div className="flex-1 flex flex-wrap items-center gap-1.5 min-w-0">
               {selectedTags.map((tagObj, idx) => {
                 const label =
                   typeof tagObj === "string"
@@ -820,13 +842,13 @@ export default function NoteEditor({
                 return (
                   <span
                     key={key}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 text-xs font-medium max-w-full truncate"
                   >
-                    {label}
+                    <span className="truncate">{label}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveTag(tagObj)}
-                      className="text-zinc-400 hover:text-white transition-colors"
+                      className="text-zinc-400 hover:text-white transition-colors shrink-0"
                     >
                       <LuX size={12} />
                     </button>
@@ -860,14 +882,14 @@ export default function NoteEditor({
 
         {/* Toolbar */}
         {editor && (
-          <div className="mx-4 mt-2 border-y border-zinc-800/80 py-1.5 flex items-center gap-0.5 text-zinc-400 text-xs select-none overflow-x-auto">
+          <div className="mx-3 sm:mx-4 mt-2 border-y border-zinc-800/80 py-1.5 flex items-center gap-0.5 text-zinc-400 text-xs select-none overflow-x-auto custom-scrollbar shrink-0">
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 1 }).run()
               }
-              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
+              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("heading", { level: 1 })
                   ? "bg-zinc-800 text-white"
                   : ""
@@ -882,7 +904,7 @@ export default function NoteEditor({
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 2 }).run()
               }
-              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
+              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("heading", { level: 2 })
                   ? "bg-zinc-800 text-white"
                   : ""
@@ -897,7 +919,7 @@ export default function NoteEditor({
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 3 }).run()
               }
-              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white ${
+              className={`px-1.5 py-1 rounded font-bold hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("heading", { level: 3 })
                   ? "bg-zinc-800 text-white"
                   : ""
@@ -912,44 +934,48 @@ export default function NoteEditor({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("bold") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Bold"
             >
-              <LuBold size={13} />
+              <LuBold size={14} />
             </button>
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("italic") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Italic"
             >
-              <LuItalic size={13} />
+              <LuItalic size={14} />
             </button>
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleUnderline().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("underline") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Underline"
             >
-              <LuUnderline size={13} />
+              <LuUnderline size={14} />
             </button>
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleStrike().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("strike") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Strikethrough"
             >
-              <LuStrikethrough size={13} />
+              <LuStrikethrough size={14} />
             </button>
 
             <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
@@ -958,44 +984,50 @@ export default function NoteEditor({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleBulletList().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("bulletList") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Bullet List"
             >
-              <LuList size={13} />
+              <LuList size={14} />
             </button>
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("orderedList") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Numbered List"
             >
-              <LuListOrdered size={13} />
+              <LuListOrdered size={14} />
             </button>
+
+            <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("codeBlock") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Code Block"
             >
-              <LuCode size={13} />
+              <LuCode size={14} />
             </button>
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
-              className={`p-1 rounded hover:bg-zinc-800 hover:text-white ${
+              className={`p-1 rounded hover:bg-zinc-800 hover:text-white shrink-0 ${
                 editor.isActive("blockquote") ? "bg-zinc-800 text-white" : ""
               }`}
+              title="Quote"
             >
-              <LuQuote size={13} />
+              <LuQuote size={14} />
             </button>
 
             <div className="w-[1px] h-4 bg-zinc-800 mx-1 shrink-0" />
@@ -1004,129 +1036,143 @@ export default function NoteEditor({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().undo().run()}
-              className="p-1 rounded hover:bg-zinc-800 hover:text-white"
+              disabled={!editor.can().undo()}
+              className="p-1 rounded hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
+              title="Undo"
             >
-              <LuUndo size={13} />
+              <LuUndo size={14} />
             </button>
 
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => editor.chain().focus().redo().run()}
-              className="p-1 rounded hover:bg-zinc-800 hover:text-white"
+              disabled={!editor.can().redo()}
+              className="p-1 rounded hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent shrink-0"
+              title="Redo"
             >
-              <LuRedo size={13} />
+              <LuRedo size={14} />
             </button>
           </div>
         )}
 
-        {/* Editor Canvas */}
-        <div
-          className="flex-1 px-4 py-4 overflow-y-auto cursor-text"
-          onClick={() => editor?.chain().focus().run()}
-        >
+        {/* Editor Body */}
+        <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 custom-scrollbar">
           <EditorContent editor={editor} />
         </div>
       </div>
 
       {/* MANAGE EDITORS MODAL */}
       {isEditorsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-lg p-5 shadow-2xl text-zinc-200">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
               <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
                 <LuUsers size={16} /> Manage Note Editors
               </h3>
               <button
                 type="button"
                 onClick={() => setIsEditorsModalOpen(false)}
-                className="text-zinc-400 hover:text-white transition-colors"
+                className="text-zinc-400 hover:text-white p-1 rounded-md transition-colors"
               >
                 <LuX size={16} />
               </button>
             </div>
 
-            {/* Add Editor Form */}
-            <form onSubmit={handleAddEditor} className="mt-4 flex gap-2">
-              <input
-                type="email"
-                required
-                autoFocus
-                placeholder="User email address..."
-                value={editorEmailInput}
-                onChange={(e) => setEditorEmailInput(e.target.value)}
-                disabled={!!editorAction}
-                className="flex-1 bg-zinc-950 border border-zinc-800 focus:border-zinc-700 disabled:opacity-50 text-xs rounded-md px-3 py-2 text-zinc-200 outline-none placeholder-zinc-600 transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={!!editorAction || !editorEmailInput.trim()}
-                className="px-3 py-2 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 font-medium text-xs rounded-md transition-colors disabled:opacity-50 shrink-0 min-w-[70px]"
-              >
-                {editorAction?.type === "add" ? "Adding..." : "Add"}
-              </button>
-            </form>
+            <div className="p-4 space-y-4">
+              <form onSubmit={handleAddEditor} className="flex gap-2">
+                <input
+                  type="email"
+                  value={editorEmailInput}
+                  onChange={(e) => setEditorEmailInput(e.target.value)}
+                  placeholder="Enter user email..."
+                  required
+                  className="flex-1 px-3 py-1.5 bg-zinc-950 border border-zinc-800 rounded-md text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                />
+                <button
+                  type="submit"
+                  disabled={editorAction?.type === "add"}
+                  className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-300 text-zinc-900 text-xs font-medium rounded-md transition-colors disabled:opacity-50 shrink-0"
+                >
+                  {editorAction?.type === "add" ? "Adding..." : "Add"}
+                </button>
+              </form>
 
-            {/* Existing Editors List */}
-            <div className="mt-4 space-y-2 max-h-56 overflow-y-auto pr-1">
-              <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Current Editors ({editors.length})
-              </p>
-              {editors.length === 0 ? (
-                <p className="text-xs text-zinc-500 italic py-2">
-                  No additional editors added yet.
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  Current Editors ({editors.length})
                 </p>
-              ) : (
-                editors.map((ed) => {
-                  const edId = ed.id || ed._id || ed.email;
-                  const isRemovingThis =
-                    editorAction?.type === "remove" &&
-                    editorAction?.email === ed.email;
 
-                  return (
-                    <div
-                      key={edId}
-                      className="flex items-center justify-between bg-zinc-950 border border-zinc-800/80 rounded px-3 py-2 text-xs"
-                    >
-                      <div className="flex flex-col min-w-0 pr-2">
-                        <span className="font-medium text-zinc-200 truncate">
-                          {ed.name || "User"}
-                        </span>
-                        <span className="text-zinc-500 text-[11px] truncate">
-                          {ed.email}
-                        </span>
-                      </div>
+                {editors.length === 0 ? (
+                  <p className="text-xs text-zinc-500 italic py-2">
+                    No co-editors added to this note.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                    {editors.map((ed) => {
+                      const edId = ed.id || ed._id || ed.email;
+                      const isRemoving =
+                        editorAction?.type === "remove" &&
+                        editorAction?.email === ed.email;
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveEditor(ed.email)}
-                        disabled={!!editorAction}
-                        className="p-1 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-900 transition-colors disabled:opacity-50 shrink-0 flex items-center gap-1"
-                        title="Revoke access"
-                      >
-                        {isRemovingThis ? (
-                          <span className="text-[11px] text-red-400 animate-pulse font-medium">
-                            Removing...
-                          </span>
-                        ) : (
-                          <LuX size={14} />
-                        )}
-                      </button>
-                    </div>
-                  );
-                })
-              )}
+                      return (
+                        <div
+                          key={edId}
+                          className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/60 border border-zinc-800/80"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700/60 flex items-center justify-center shrink-0">
+                              {ed.image || ed.avatar || ed.picture ? (
+                                <img
+                                  src={ed.image || ed.avatar || ed.picture}
+                                  alt={ed.name || "Editor"}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs font-semibold text-zinc-400 uppercase">
+                                  {(ed.name || ed.email || "U").charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-medium text-zinc-200 truncate">
+                                {ed.name || "User"}
+                              </span>
+                              <span className="text-[11px] text-zinc-500 truncate">
+                                {ed.email}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEditor(ed.email)}
+                            disabled={isRemoving}
+                            className="p-1 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                            title="Remove editor"
+                          >
+                            <LuX size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* CONFIRM DELETE MODAL */}
       <ConfirmModal
         isOpen={confirmOpen}
-        title="Delete note permanently?"
-        message="This will permanently delete the note. This action cannot be undone."
-        onClose={() => setConfirmOpen(false)}
+        title="Delete Permanently"
+        message="Are you sure you want to permanently delete this note? This action cannot be undone."
+        confirmText="Delete Forever"
+        cancelText="Cancel"
         onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmOpen(false)}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { IoClose } from "react-icons/io5";
 import { createTag, updateTag } from "../../api/axios";
 import { useAuth } from "../../context/AuthProvider";
+import ModalPortal from "./ModalPortal";
 import {
   setTagColor,
   getTagColor,
@@ -114,12 +115,13 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
-        isAnimating ? "bg-black/60 opacity-100" : "bg-black/0 opacity-0"
-      }`}
-      onClick={onClose}
-    >
+    <ModalPortal>
+      <div
+        className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-200 ${
+          isAnimating ? "bg-black/60 opacity-100" : "bg-black/0 opacity-0"
+        }`}
+        onClick={onClose}
+      >
       <div
         className={`w-full max-w-md rounded-2xl bg-neutral-900 p-6 text-white shadow-2xl transition-all duration-200 border border-neutral-800 ${
           isAnimating ? "scale-100 opacity-100" : "scale-95 opacity-0"
@@ -128,7 +130,7 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">
-            {isEditing ? "Edit Tag" : "Create Tag"}
+            {isEditing ? "Edit Tag" : "New tag"}
           </h2>
           <button
             onClick={onClose}
@@ -147,13 +149,13 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-neutral-400 mb-1">
-              Tag Name
+              Name
             </label>
             <input
               type="text"
               value={tagName}
               onChange={(e) => setTagName(e.target.value)}
-              placeholder="e.g. Design, React..."
+              placeholder="e.g. ideas"
               className="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-white focus:outline-none"
               autoFocus
             />
@@ -161,9 +163,9 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
 
           <div>
             <label className="block text-xs font-medium text-neutral-400 mb-2">
-              Color Accent
+              Color
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {COLOR_PRESETS.map((color) => (
                 <button
                   key={color}
@@ -180,24 +182,25 @@ export default function TagModal({ isOpen, onClose, onTagChanged, tag }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
+          <div className="pt-2 space-y-2">
             <button
               type="submit"
               disabled={loading || !tagName.trim()}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200 transition-colors disabled:opacity-50"
+              className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-500 transition-colors disabled:opacity-50"
             >
-              {loading ? "Saving..." : isEditing ? "Update Tag" : "Create Tag"}
+              {loading ? "Saving..." : isEditing ? "Update Tag" : "Create"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full rounded-lg px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white transition-colors"
+            >
+              Cancel
             </button>
           </div>
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }

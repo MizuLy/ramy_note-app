@@ -13,6 +13,7 @@ import {
   LuPencilLine,
   LuTag,
   LuFolder,
+  LuX,
 } from "react-icons/lu";
 import { GoPlus, GoChevronDown } from "react-icons/go";
 import { useAuth } from "../context/AuthProvider";
@@ -26,10 +27,32 @@ import TagModal from "../components/modals/TagModal";
 // API
 import { getFolders, deleteFolder, getTags, deleteTag } from "../api/axios";
 
-export default function Sidebar() {
+// Tracks whether the viewport is below Tailwind's `md` breakpoint (768px),
+// updating on resize/orientation change instead of reading window.innerWidth
+// once at render time.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768,
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  return isMobile;
+}
+
+export default function Sidebar({ onCloseMobile }) {
   const [collapsed, setCollapsed] = useState(() => {
     return localStorage.getItem("sidebarCollapsed") === "true";
   });
+
+  const isMobile = useIsMobile();
+  // On mobile the sidebar always renders expanded (it's a full drawer),
+  // so labels should show whenever we're not collapsed OR we're on mobile.
+  const showLabels = !collapsed || isMobile;
 
   // Folder States
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -54,6 +77,11 @@ export default function Sidebar() {
   const [contextMenu, setContextMenu] = useState(null);
 
   const { user, accessToken } = useAuth();
+
+  // Helper to handle link navigation & auto-close mobile drawer
+  const handleNavClick = () => {
+    if (onCloseMobile) onCloseMobile();
+  };
 
   // Toggles
   const toggleCollapsed = () => {
@@ -190,7 +218,7 @@ export default function Sidebar() {
 
   const getLinkClass = ({ isActive }) =>
     `flex items-center gap-3 py-2 rounded-md transition-colors duration-200 cursor-pointer ${
-      collapsed ? "justify-center px-0" : "px-3"
+      collapsed ? "md:justify-center md:px-0 px-3" : "px-3"
     } ${
       isActive
         ? "bg-zinc-900 text-white font-semibold border-l-2 border-blue-500"
@@ -199,7 +227,7 @@ export default function Sidebar() {
 
   const getItemLinkClass = ({ isActive }) =>
     `flex items-center gap-2 py-1.5 rounded-md text-sm cursor-pointer transition-colors w-full ${
-      collapsed ? "justify-center px-0" : "px-2"
+      collapsed ? "md:justify-center md:px-0 px-2" : "px-2"
     } ${
       isActive
         ? "bg-zinc-900 text-white font-medium"
@@ -210,16 +238,14 @@ export default function Sidebar() {
     <>
       <nav
         className={`bg-zinc-800 h-screen shrink-0 text-white flex flex-col transition-all duration-300 select-none ${
-          collapsed ? "w-[64px]" : "w-[260px]"
+          collapsed ? "w-[280px] md:w-[64px]" : "w-[280px] md:w-[260px]"
         }`}
       >
         {/* Header */}
         <div
-          className={`border-b border-zinc-700 p-4 flex items-center ${
-            collapsed ? "justify-center" : "justify-between"
-          }`}
+          className={`border-b border-zinc-700 p-4 flex items-center justify-between`}
         >
-          {!collapsed && (
+          {showLabels && (
             <div className="overflow-hidden pr-2">
               <h1 className="text-sm font-semibold truncate">
                 Welcome, {user?.name || "User"}
@@ -229,10 +255,12 @@ export default function Sidebar() {
               </p>
             </div>
           )}
+
+          {/* Desktop Collapse Toggle */}
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="text-zinc-400 hover:text-white shrink-0 p-1 rounded-md hover:bg-zinc-700 transition-colors"
+            className="hidden md:block text-zinc-400 hover:text-white shrink-0 p-1 rounded-md hover:bg-zinc-700 transition-colors"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
@@ -241,59 +269,96 @@ export default function Sidebar() {
               <LuPanelLeftClose size={20} />
             )}
           </button>
+
+          {/* Mobile Close Button */}
+          {onCloseMobile && (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="md:hidden text-zinc-400 hover:text-white shrink-0 p-1 rounded-md hover:bg-zinc-700 transition-colors"
+              aria-label="Close sidebar"
+            >
+              <LuX size={20} />
+            </button>
+          )}
         </div>
 
         {/* Search Trigger */}
         <div className="px-3 mt-4 mb-2">
           <button
             type="button"
-            onClick={() => document.getElementById("searchModal")?.showModal()}
-            className={`relative flex items-center rounded-md bg-zinc-700 hover:bg-zinc-900 text-sm text-zinc-400 transition-colors duration-200 ${
+            onClick={() => {
+              document.getElementById("searchModal")?.showModal();
+              handleNavClick();
+            }}
+            className={`relative flex items-center rounded-md bg-zinc-700 hover:bg-zinc-900 text-sm text-zinc-400 transition-colors duration-200 w-full pl-9 pr-4 py-2 text-left ${
               collapsed
-                ? "w-10 h-10 justify-center mx-auto"
-                : "w-full pl-9 pr-4 py-2 text-left"
+                ? "md:w-10 md:h-10 md:justify-center md:mx-auto md:p-0"
+                : ""
             }`}
           >
             <IoSearch
-              className={`text-zinc-400 text-lg shrink-0 ${collapsed ? "" : "absolute left-3"}`}
+              className={`text-zinc-400 text-lg shrink-0 ${
+                collapsed ? "absolute left-3 md:static" : "absolute left-3"
+              }`}
             />
-            {!collapsed && <span>Search notes...</span>}
+            {showLabels && <span>Search notes...</span>}
           </button>
         </div>
 
         {/* Main Nav Items */}
         <div className="px-3 py-2 flex-1 space-y-1 overflow-y-auto">
-          <NavLink to="/notes" className={getLinkClass} title="My Notes">
+          <NavLink
+            to="/notes"
+            onClick={handleNavClick}
+            className={getLinkClass}
+            title="My Notes"
+          >
             <PiNotebookLight size={20} className="shrink-0" />
-            {!collapsed && (
+            {showLabels && (
               <span className="text-sm flex-1 truncate">My Notes</span>
             )}
           </NavLink>
 
-          <NavLink to="/todos" className={getLinkClass} title="My To-do">
+          <NavLink
+            to="/todos"
+            onClick={handleNavClick}
+            className={getLinkClass}
+            title="My To-do"
+          >
             <LuListTodo size={20} className="shrink-0" />
-            {!collapsed && (
+            {showLabels && (
               <span className="text-sm flex-1 truncate">My To-do</span>
             )}
           </NavLink>
 
-          <NavLink to="/journals" className={getLinkClass} title="My Journals">
+          <NavLink
+            to="/journals"
+            onClick={handleNavClick}
+            className={getLinkClass}
+            title="My Journals"
+          >
             <LuPencilLine size={20} className="shrink-0" />
-            {!collapsed && (
+            {showLabels && (
               <span className="text-sm flex-1 truncate">My Journals</span>
             )}
           </NavLink>
 
-          <NavLink to="/trash" className={getLinkClass} title="Trash">
+          <NavLink
+            to="/trash"
+            onClick={handleNavClick}
+            className={getLinkClass}
+            title="Trash"
+          >
             <LuTrash2 size={20} className="shrink-0" />
-            {!collapsed && (
+            {showLabels && (
               <span className="text-sm flex-1 truncate">Trash</span>
             )}
           </NavLink>
 
           {/* FOLDERS SECTION */}
           <div className="px-3 py-2">
-            {!collapsed && (
+            {showLabels && (
               <div className="flex items-center justify-between text-zinc-400 font-medium text-xs">
                 <button
                   type="button"
@@ -302,7 +367,9 @@ export default function Sidebar() {
                 >
                   <GoChevronDown
                     size={14}
-                    className={`transition-transform duration-200 ${isFoldersOpen ? "rotate-0" : "-rotate-90"}`}
+                    className={`transition-transform duration-200 ${
+                      isFoldersOpen ? "rotate-0" : "-rotate-90"
+                    }`}
                   />
                   <span>FOLDERS</span>
                 </button>
@@ -337,6 +404,7 @@ export default function Sidebar() {
                       >
                         <NavLink
                           to={`/folders/${id}`}
+                          onClick={handleNavClick}
                           className={getItemLinkClass}
                           title={folder.name}
                         >
@@ -351,7 +419,7 @@ export default function Sidebar() {
                                 "#3b82f6",
                             }}
                           />
-                          {!collapsed && (
+                          {showLabels && (
                             <span className="truncate flex-1 text-zinc-400 text-xs">
                               {folder.name}
                             </span>
@@ -367,7 +435,7 @@ export default function Sidebar() {
 
           {/* TAGS SECTION */}
           <div className="px-3 py-2">
-            {!collapsed && (
+            {showLabels && (
               <div className="flex items-center justify-between text-zinc-400 font-medium text-xs">
                 <button
                   type="button"
@@ -414,6 +482,7 @@ export default function Sidebar() {
                       >
                         <NavLink
                           to={`/tags/${id}`}
+                          onClick={handleNavClick}
                           className={getItemLinkClass}
                           title={label}
                         >
@@ -424,7 +493,7 @@ export default function Sidebar() {
                               color: getTagColor(id) || t.color || "#3b82f6",
                             }}
                           />
-                          {!collapsed && (
+                          {showLabels && (
                             <span className="truncate flex-1 text-zinc-400 text-xs">
                               {label}
                             </span>
@@ -440,9 +509,14 @@ export default function Sidebar() {
 
           {/* Admin Link */}
           {user?.role === "ADMIN" && (
-            <NavLink to="/admin" className={getLinkClass} title="Admin">
+            <NavLink
+              to="/admin"
+              onClick={handleNavClick}
+              className={getLinkClass}
+              title="Admin"
+            >
               <RiShieldUserLine size={20} className="shrink-0" />
-              {!collapsed && (
+              {showLabels && (
                 <span className="text-sm flex-1 truncate">Admin</span>
               )}
             </NavLink>
@@ -453,8 +527,9 @@ export default function Sidebar() {
         <div className="p-3 border-t border-zinc-700">
           <Link
             to="/settings"
+            onClick={handleNavClick}
             className={`flex items-center gap-3 rounded-md hover:bg-zinc-800/60 transition-colors text-zinc-200 ${
-              collapsed ? "justify-center p-2" : "p-2"
+              collapsed ? "md:justify-center md:p-2 p-2" : "p-2"
             }`}
             title="Settings"
           >
@@ -470,7 +545,7 @@ export default function Sidebar() {
               )}
             </div>
 
-            {!collapsed && (
+            {showLabels && (
               <>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-zinc-200 truncate">
