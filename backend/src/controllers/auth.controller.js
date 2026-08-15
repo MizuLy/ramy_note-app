@@ -10,6 +10,8 @@ const { sendOtp, sendResetLink } = require("../utils/sendMail");
 
 // Refresh controller
 const refresh = async (req, res) => {
+  console.log("Headers Cookies:", req.headers.cookie);
+  console.log("Parsed Cookies:", req.cookies);
   const token = req.cookies.refreshToken;
   if (!token) return res.status(401).json({ error: "No refresh token" });
 
