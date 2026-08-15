@@ -50,9 +50,10 @@ Ramy (Note-app)/
 │       ├── server.js         # app entry, middleware, route mounting
 │       ├── configs/          # db.js (Prisma client), cloudinary.js, upload.js (multer), otp.js (unused)
 │       ├── controllers/      # request handlers per feature
-│       ├── middlewares/      # verifyToken, isAdmin, rateLimiter
+│       ├── middlewares/      # verifyToken, isAdmin, rateLimiter, validateRequest
 │       ├── routes/           # Express routers per feature
-│       └── utils/            # generateToken.js, sendMail.js
+│       ├── utils/            # generateToken.js, sendMail.js
+│       └── validators/       # auth.validator.js (Zod schemas for /auth routes)
 └── frontend/
     ├── vite.config.js
     ├── tailwind.config.js    # custom zinc palette + fonts + daisyUI themes
@@ -97,7 +98,7 @@ The editor m2m on Notes (`editors`) is **fully implemented**: the owner adds/rem
 - `POST /api/otp/request` & `POST /api/otp/verify` → verify sets `isVerified: true`.
 - `POST /api/auth/forgot-password` → generates a 32-byte hex token (30 min expiry), stores it in `ResetTokens` (clearing old ones for the email), and emails `FRONTEND_URL/reset-password?token=...` via Brevo. Returns a generic success message even if the email doesn't exist (avoids user enumeration).
 - `POST /api/auth/reset-password` → validates token + expiry, hashes the new password, updates the user, deletes the token.
-- `POST /api/auth/login` → checks `isVerified`, returns `{ accessToken, data: {id, name, email, image, role} }` and sets an httpOnly `refreshToken` cookie (7d; `sameSite: strict` in dev, `sameSite: none` + `secure` in production). The frontend `Login` page normalizes `image`/`avatar` before storing the user.
+- `POST /api/auth/login` → checks `isVerified`, returns `{ accessToken, data: {id, name, email, image, role} }` and sets an httpOnly `refreshToken` cookie (7d; `sameSite: lax` in dev, `sameSite: none` + `secure` in production). The frontend `Login` page normalizes `image`/`avatar` before storing the user.
 - `POST /api/auth/refresh` → reads cookie, returns a new `accessToken` + user object. The frontend calls this on app mount to restore the session.
 - Access token expires in **15 minutes** (`utils/generateToken.js`). There is currently **no automatic access-token refresh on 401 in the frontend**; `AuthProvider` only refreshes once at boot.
 
@@ -105,7 +106,7 @@ The editor m2m on Notes (`editors`) is **fully implemented**: the owner adds/rem
 
 | Route | Methods | Notes |
 |-------|---------|-------|
-| `/auth` | refresh, register, login, logout, current-user, change-name, change-email, change-password, change-avatar (multipart), forgot-password, reset-password | avatar via multer→Cloudinary; reset link via Brevo |
+| `/auth` | refresh, register, login, logout, current-user, change-name, change-email, change-password, change-avatar (multipart), forgot-password, reset-password | avatar via multer→Cloudinary; reset link via Brevo; register/login/forgot-password/reset-password run `authLimiter`; all body-bearing routes run `validateRequest` with Zod schemas from `validators/auth.validator.js` |
 | `/otp` | request, verify | |
 | `/notes` | GET list, POST, GET `/:id`, PUT `/:id`, PATCH `/:id` (togglePin), DELETE `/:id` (soft delete), `/:id/restore`, `/:id/permanent`, POST `/:id/editors` (add editor), DELETE `/:id/editors` (remove editor) | supports `?trash=true`, `?tag=`, `?pinned=`, `?search=`, pagination |
 | `/folders` | GET list, POST, GET `/:id`, PATCH `/:id`, DELETE `/:id` | |
@@ -124,7 +125,8 @@ The editor m2m on Notes (`editors`) is **fully implemented**: the owner adds/rem
 
 - `verifyToken.js` — Bearer or cookie token → `req.user`.
 - `isAdmin.js` — blocks non-ADMIN (`403`).
-- `rateLimiter.js` — `generalLimiter` (10k/15min, global), `authLimiter` (5/15min, login/register), `otpLimiter` (3/5min, OTP request).
+- `rateLimiter.js` — `generalLimiter` (10k/15min, global), `authLimiter` (5/15min, login/register/forgot-password/reset-password), `otpLimiter` (3/5min, OTP request).
+- `validateRequest.js` — Zod schema validation for any route with a `req.body`; on failure returns `400` with the joined issue messages. Only wired up on `/auth` routes; schemas live in `src/validators/auth.validator.js`.
 
 ### Configs & utils
 
@@ -132,7 +134,7 @@ The editor m2m on Notes (`editors`) is **fully implemented**: the owner adds/rem
 - `configs/upload.js` + `cloudinary.js` — multer with Cloudinary storage, folder `ramy-note-app/avatars`, 300×300 fill crop.
 - `utils/sendMail.js` — `sendOtp` / `sendSuccess` / `sendResetLink`; sends **all** email via the Brevo API (`axios` POST to `BREVO_API_URL`), no Nodemailer involved.
 - `configs/otp.js` — Nodemailer transporter (Resend SMTP prod / Gmail dev); currently **unused dead code** (kept for reference).
-- `utils/generateToken.js` — access (15m) + refresh (7d) tokens; refresh cookie is `httpOnly`, `sameSite: strict` in dev and `sameSite: none` + `secure` in production (`generateToken.js:15`).
+- `utils/generateToken.js` — access (15m) + refresh (7d) tokens; refresh cookie is `httpOnly`, `sameSite: lax` in dev and `sameSite: none` + `secure` in production (`generateToken.js:15`). Note: the `logout` handler clears the cookie with `sameSite: "strict"` (`auth.controller.js:128`) — a mismatch that works in practice but is worth knowing about if dev cookie issues come up.
 
 ## 6. Frontend Architecture
 
@@ -144,7 +146,7 @@ BrowserRouter > AuthProvider > ThemeProvider > App
 
 Routes in `App.jsx`:
 - **AuthLayout**: `/login`, `/register`, `/verify-otp`, `/forgot-password`, `/reset-password` (the latter reads `?token=` from the emailed reset link)
-- **DashboardLayout** (wrapped in `ProtectedRoute`): `/` (welcome), `/notes/:id?`, `/folders/:folderId/:noteId?`, `/tags/:tagId/:noteId?`, `/trash/:id?` (renders the dedicated `Trash` page), `/todos`, `/journals`, `/journal`, `/journal/:id`, `/journal/trash`, `/journal/trash/:id`, `/settings`
+- **DashboardLayout** (wrapped in `ProtectedRoute`): `/` (welcome — a centered "Welcome back, {name}" screen with a "Go to My Notes" button), `/notes/:id?`, `/folders/:folderId/:noteId?`, `/tags/:tagId/:noteId?`, `/trash/:id?` (renders the dedicated `Trash` page), `/todos`, `/journals`, `/journal`, `/journal/:id`, `/journal/trash`, `/journal/trash/:id`, `/settings`
 - **AdminLayout** (wrapped in `AdminRoute`): `/admin`
 - `*` → `NotFound.jsx`
 
@@ -159,7 +161,9 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 
 ### Pages
 
-- **note/** — `Note.jsx` (container: two-pane list + editor, route-based selection), `Trash.jsx` (same two-pane layout for `/trash`, wires `NoteList` + `NoteEditor` with `isTrash`), `NoteList.jsx` (search, time filters, pin, trash actions — sorts by `updatedAt || createdAt`), `NoteEditor.jsx` (TipTap rich text editor).
+- **note/** — `Note.jsx` (two-pane container: list + editor), `Trash.jsx` (same layout for `/trash`, wires `NoteList` + `NoteEditor` with `isTrash`), `NoteList.jsx`, `NoteEditor.jsx` (TipTap rich text editor).
+  - **Collapsible list pane**: `Note.jsx` keeps `isListOpen` (persisted in localStorage under `notelist_pane_open`). On desktop the toggle (`LuPanelLeftClose`, "Hide Note List") sits in the NoteList header; when collapsed the pane collapses to `sm:w-0` with `overflow-hidden` and an expand button (`LuPanelLeftOpen`, "Expand Note List") floats over the editor. On mobile the list is full-width while no note is selected and the editor takes over once one is (a back button clears the selection). When nothing is selected on desktop, the editor pane shows a "Pick a note or start writing" empty state.
+  - `NoteList.jsx` — search, time filters, pin, trash actions — sorts by `updatedAt || createdAt`. Pinned/Notes sections are independently collapsible with their open state persisted in localStorage (`notes_pinned_open` / `notes_unpinned_open`); each card shows a relative timestamp + word count.
   - **Autosave**: `NoteEditor` debounces saves by 800ms via refs (`titleRef`, `isPinnedRef`, `selectedTagsRef`, `activeNoteIdRef`) so stale closures don't clobber newer content. Editor content is stored as HTML in `notes.body`. On save it reads back `res.data.data.updatedAt` to update the "Last Modified" timestamp.
   - **Sharing**: `NoteEditor` renders a metadata section with owner ("Created by", from `getNoteId`'s included `user`), an editors count + **Manage** button (owner-only, hidden in trash mode) that opens a modal to add/remove editors by email via `addEditor`/`removeEditor`. `getNoteId` includes `image` on both `user` and `editors`. Hovering the editor count opens a popover listing each editor with their avatar (`avatarUrl = ed.image || ed.avatar || ed.picture` fallback). Add/remove actions track per-editor loading state via the `editorAction` object (`{type: "add"}` / `{type: "remove", email}`): the email input, Add button, and all remove buttons are disabled while an action is in flight, and the editor being removed shows a "Removing..." state.
   - **Trash mode**: `NoteEditor` takes an `isTrash` prop — the toolbar hides pin / folder / new-note actions and instead offers Restore + Delete Forever (permanent delete is confirmed via `ConfirmModal`). Trash notes are fetched with `getNoteId(id, token, { trash: true })`.
@@ -171,8 +175,10 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 
 ### Components
 
-- `Sidebar.jsx` — collapsible nav (persisted in localStorage) with a Trash link, folders + tags sections with create/edit/delete modals and a right-click context menu. Folder/tag colors come from `utils/localColors.js` (localStorage map keyed by id). Admin link shown only when `user.role === "ADMIN"`.
-- `modals/` — `FolderModal`, `DeleteFolderModal` (mode: delete notes or keep them), `TagModal`, `DeleteTagModal`, `SearchModal`, `ConfirmModal` (generic destructive-action confirm, replaces `window.confirm` for permanent note delete).
+- `Sidebar.jsx` — collapsible nav (persisted in localStorage) with a Trash link, folders + tags sections with create/edit/delete modals and a right-click context menu (coordinates clamped to the viewport). Folder/tag colors come from `utils/localColors.js` (localStorage map keyed by id). Admin link shown only when `user.role === "ADMIN"`. Responsive: on desktop it collapses to a 64px icon rail; on mobile it's a slide-in overlay driven by `DashboardLayout` (fixed positioning + backdrop) and takes an `onCloseMobile` prop to close on navigation.
+- `DashboardLayout.jsx` — responsive shell: `flex-col` on mobile (top bar with the `ram.png` logo + "Ramy" wordmark and a hamburger that opens the sidebar overlay) vs `flex-row` on desktop (fixed sidebar). Renders the global `SearchModal`.
+- `modals/` — `ModalPortal` (generic `createPortal(children, document.body)` wrapper), `FolderModal`, `DeleteFolderModal` (mode: delete notes or keep them), `TagModal`, `DeleteTagModal`, `SearchModal`, `ConfirmModal` (generic destructive-action confirm, replaces `window.confirm` for permanent note delete).
+- `SearchModal` is rendered globally in `DashboardLayout` as a plain `<div id="searchModal">`; the Sidebar search button triggers it via `document.getElementById("searchModal").showModal()` (the component shims `showModal`/`close` onto itself). It live-searches notes by title/content, filters by multi-select tag pills, animates open/close, dismisses on Escape/backdrop click, and routes to `/notes/:id`.
 - `ProtectedRoute.jsx` / `AdminRoute.jsx` — auth / role guards (redirect to login/admin home as appropriate).
 - `AvatarUpload.jsx`, `RoleDropdown.jsx` — used in settings / admin pages.
 
@@ -191,7 +197,9 @@ Plain axios wrappers (not a shared instance). Every authed call passes `Authoriz
 - **Response shapes differ per endpoint** — always unwrap defensively (`res?.data || res?.result || res`).
 - **API base URLs are hardcoded** to `VITE_API_URL` in `frontend/src/api/axios.js` and `frontend/src/api/admin.js`. There is no Vite proxy / env-based URL config.
 - **Note body is HTML** (TipTap). Never render note previews with `dangerouslySetInnerHTML` without sanitizing; previews strip HTML via DOMParser (`NoteList.jsx:25`).
-- **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again. The refresh cookie is `sameSite: strict` in dev but `sameSite: none` (requires `secure`) in production.
+- **Session caveat**: access token is only refreshed once at boot (`AuthProvider`). If a 401 occurs mid-session, the app does not auto-refresh — user must reload/login again. The refresh cookie is `sameSite: lax` in dev but `sameSite: none` (requires `secure`) in production.
+- **Request validation**: only `/auth` routes validate bodies with Zod (`middlewares/validateRequest.js` + `validators/auth.validator.js`). Other routes do manual checks in their controllers. The `changeEmailSchema`/`changePasswordSchema`/`resetPasswordSchema` require the current password/token — schemas must stay in sync with any new auth endpoints.
+- **Persisted UI state**: several components keep layout state in localStorage — `sidebarCollapsed`, `isFoldersOpen`, `isTagsOpen`, `notelist_pane_open` (Note.jsx list pane), `notes_pinned_open` / `notes_unpinned_open` (NoteList sections). Clear localStorage if the UI "loses" a pane.
 - **Note sharing**: only the owner can add/remove editors (`addEditor`/`removeEditor` check `note.userId`); editors can read + edit the note body/title/tags but **cannot** pin, trash, restore, or permanently delete it — those handlers check `userId` only. Shared notes are fetched via the `OR: [{ userId }, { editors: { some: { id } } }]` filter in `getNotes`/`getNoteId`.
 - **Email**: `utils/sendMail.js` is the only active sender — the Brevo API (`BREVO_*` vars). `configs/otp.js` (Nodemailer/Resend) is dead code.
 - **Password reset**: `POST /api/auth/forgot-password` always returns a generic success (no user enumeration); reset tokens are single-use and expire after 30 minutes. `FRONTEND_URL` must be set or the emailed link is broken (`undefined/reset-password?...`).
