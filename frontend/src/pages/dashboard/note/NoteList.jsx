@@ -319,12 +319,23 @@ export default function NoteList({
             <h1 className="text-xs font-semibold tracking-wider text-zinc-200 uppercase">
               {listTitle}
             </h1>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
+            <span className="text-xs px-1.5 py-0.5 rounded-full bg-zinc-900 text-zinc-500 border border-zinc-800">
               {displayedNotes.length}
             </span>
           </div>
 
           <div className="flex items-center gap-1">
+            {!isTrash && (
+              <button
+                onClick={handleCreateNote}
+                disabled={creating}
+                className="p-1.5 rounded bg-white text-black hover:text-white hover:bg-zinc-500 transition-colors disabled:opacity-50"
+                title="Create note"
+              >
+                <LuPlus size={15} />
+              </button>
+            )}
+
             {/* Collapse Button - Desktop only */}
             {onTogglePane && (
               <button
@@ -332,18 +343,7 @@ export default function NoteList({
                 className="hidden sm:flex p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 transition-colors"
                 title="Hide Note List"
               >
-                <LuPanelLeftClose size={15} />
-              </button>
-            )}
-
-            {!isTrash && (
-              <button
-                onClick={handleCreateNote}
-                disabled={creating}
-                className="p-1.5 rounded bg-white text-black hover:bg-zinc-200 transition-colors disabled:opacity-50"
-                title="Create note"
-              >
-                <LuPlus size={13} />
+                <LuPanelLeftClose size={20} />
               </button>
             )}
           </div>
