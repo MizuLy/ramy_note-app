@@ -331,7 +331,7 @@ export default function NoteEditor({
 
   // Tiptap Setup
   const editor = useEditor({
-    extensions: [StarterKit, Underline],
+    extensions: [StarterKit],
     content: "",
     editorProps: {
       attributes: {
