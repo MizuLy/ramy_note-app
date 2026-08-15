@@ -1,7 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { verifyOtp, requestOtp } from "../../api/axios";
-import { useEffect } from "react";
 
 export default function VerifyOtp() {
   const location = useLocation();
@@ -14,26 +13,35 @@ export default function VerifyOtp() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
-
-  useEffect(() => {
-    if (!email) {
-      navigate("/login"); // no email in state = shouldn't be here
-    }
-  }, [email, navigate]);
-
-  if (!email) return null; // avoid flashing content before redirect
+  const [cooldown, setCooldown] = useState(0);
 
   const inputRefs = useRef([]);
 
+  useEffect(() => {
+    if (!email) {
+      navigate("/login");
+    }
+  }, [email, navigate]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  if (!email) return null;
+
   const handleChange = (index, value) => {
-    if (!/^\d?$/.test(value)) return; // only allow single digit
+    const rawDigit = value.replace(/\D/g, "").slice(-1);
 
     const newDigits = [...digits];
-    newDigits[index] = value;
+    newDigits[index] = rawDigit;
     setDigits(newDigits);
 
-    // Auto-focus next box
-    if (value && index < 3) {
+    if (rawDigit && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -50,14 +58,17 @@ export default function VerifyOtp() {
       .getData("text")
       .replace(/\D/g, "")
       .slice(0, 4);
+
     if (!pasted) return;
 
-    const newDigits = [...digits];
-    for (let i = 0; i < 4; i++) {
-      newDigits[i] = pasted[i] || "";
+    const newDigits = ["", "", "", ""];
+    for (let i = 0; i < pasted.length; i++) {
+      newDigits[i] = pasted[i];
     }
     setDigits(newDigits);
-    inputRefs.current[Math.min(pasted.length, 3)]?.focus();
+
+    const targetIndex = Math.min(pasted.length - 1, 3);
+    inputRefs.current[targetIndex]?.focus();
   };
 
   const otp = digits.join("");
@@ -84,6 +95,8 @@ export default function VerifyOtp() {
   };
 
   const handleResend = async () => {
+    if (cooldown > 0) return;
+
     setError("");
     setMessage("");
     setResending(true);
@@ -92,6 +105,7 @@ export default function VerifyOtp() {
       await requestOtp({ email });
       setMessage("A new code has been sent to your email.");
       setDigits(["", "", "", ""]);
+      setCooldown(30);
       inputRefs.current[0]?.focus();
     } catch (err) {
       const errorMsg =
@@ -105,17 +119,23 @@ export default function VerifyOtp() {
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <h2 className="text-xl font-semibold text-white mb-1">
-        Verify your email
-      </h2>
-      <p className="text-sm text-zinc-400 mb-6">
-        Enter the 4-digit code sent to{" "}
-        <span className="text-zinc-200">{email}</span>
-      </p>
+    <div className="w-full max-w-md mx-auto p-8 rounded-2xl bg-zinc-950/60 backdrop-blur-xl border border-zinc-800/80 shadow-2xl shadow-black/80">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold tracking-tight text-zinc-100 mb-2">
+          Verify your email
+        </h2>
+        <p className="text-sm text-zinc-400">
+          We sent a 4-digit verification code to <br />
+          <span className="text-zinc-200 font-medium underline underline-offset-4 decoration-zinc-700">
+            {email}
+          </span>
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex justify-center gap-3" onPaste={handlePaste}>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* OTP Input Fields */}
+        <div className="flex justify-center gap-3.5" onPaste={handlePaste}>
           {digits.map((digit, index) => (
             <input
               key={index}
@@ -127,32 +147,77 @@ export default function VerifyOtp() {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               autoFocus={index === 0}
-              className="w-14 h-16 text-center text-2xl font-semibold rounded-md bg-zinc-700 text-white outline-none focus:ring-2 focus:ring-zinc-500"
+              className={`w-14 h-16 text-center text-2xl font-semibold rounded-xl bg-zinc-900/90 text-white outline-none border transition-all duration-200 ${
+                digit
+                  ? "border-zinc-400 ring-2 ring-zinc-400/20 bg-zinc-900"
+                  : "border-zinc-800 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-500/20"
+              } focus:scale-[1.03]`}
             />
           ))}
         </div>
 
-        {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+        {/* Feedback Messages */}
+        {error && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 text-center font-medium animate-fadeIn">
+            {error}
+          </div>
+        )}
         {message && (
-          <p className="text-sm text-green-400 text-center">{message}</p>
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 text-center font-medium animate-fadeIn">
+            {message}
+          </div>
         )}
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading || otp.length !== 4}
-          className="w-full py-2 rounded-md bg-zinc-100 text-zinc-900 font-medium hover:bg-zinc-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-xl bg-zinc-100 text-zinc-950 font-semibold hover:bg-white active:scale-[0.99] disabled:opacity-40 disabled:hover:bg-zinc-100 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-white/5"
         >
-          {loading ? "Verifying..." : "Verify"}
+          {loading ? (
+            <span className="inline-flex items-center gap-2">
+              <svg
+                className="animate-spin h-4 w-4 text-zinc-950"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+              Verifying...
+            </span>
+          ) : (
+            "Verify Code"
+          )}
         </button>
       </form>
 
-      <button
-        onClick={handleResend}
-        disabled={resending}
-        className="w-full mt-4 text-sm text-zinc-400 hover:text-white disabled:opacity-50"
-      >
-        {resending ? "Sending..." : "Resend code"}
-      </button>
+      {/* Resend Action */}
+      <div className="mt-6 text-center">
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={resending || cooldown > 0}
+          className="text-xs font-medium text-zinc-400 hover:text-zinc-200 disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors duration-150"
+        >
+          {resending
+            ? "Sending..."
+            : cooldown > 0
+              ? `Didn't receive code? Resend in ${cooldown}s`
+              : "Didn't receive code? Resend code"}
+        </button>
+      </div>
     </div>
   );
 }
