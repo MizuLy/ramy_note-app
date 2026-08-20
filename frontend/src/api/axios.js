@@ -25,9 +25,10 @@ export const register = (data) =>
 export const logout = (data) =>
   axios.post(`${API_AUTH}/logout`, {}, { withCredentials: true });
 export const currentUser = async (accessToken) => {
-  const res = await axios.get(`${API_AUTH}/current-user`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  const res = await axios.get(
+    `${API_AUTH}/current-user`,
+    getAuthHeader(accessToken),
+  );
   return res.data.user;
 };
 
@@ -39,9 +40,13 @@ export const changeEmail = (data, accessToken) =>
 export const changePassword = (data, accessToken) =>
   axios.patch(`${API_AUTH}/change-password`, data, getAuthHeader(accessToken));
 export const changeAvatar = (formData, accessToken) =>
-  axios.patch(`${API_AUTH}/change-avatar`, formData, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  axios.patch(
+    `${API_AUTH}/change-avatar`,
+    formData,
+    getAuthHeader(accessToken),
+  );
+export const removeMyself = (accessToken) =>
+  axios.delete(`${API_AUTH}/remove-myself`, getAuthHeader(accessToken));
 
 // OTP
 export const verifyOtp = (data) =>

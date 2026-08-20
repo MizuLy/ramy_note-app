@@ -21,7 +21,9 @@ import {
   changePassword,
   changeAvatar,
   logout,
+  removeMyself,
 } from "../../api/axios";
+import ConfirmModal from "../../components/modals/ConfirmModal";
 
 export default function Settings() {
   const { user, setUser, setAccessToken, accessToken } = useAuth();
@@ -47,6 +49,9 @@ export default function Settings() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
 
+  // Modal
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
   useEffect(() => {
     document.title = "Settings | Ramy";
   }, []);
@@ -58,7 +63,7 @@ export default function Settings() {
     }
   }, [user]);
 
-  // 📸 Avatar Handler with Toast
+  // Avatar Handler with Toast
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -111,7 +116,7 @@ export default function Settings() {
       .finally(() => setAvatarUploading(false));
   };
 
-  // 👤 Save Name Handler
+  // Save Name Handler
   const handleSaveName = async () => {
     setNameSaving(true);
     try {
@@ -129,7 +134,7 @@ export default function Settings() {
     }
   };
 
-  // ✉️ Change Email Handler
+  // Change Email Handler
   const handleChangeEmail = async () => {
     setEmailSaving(true);
     try {
@@ -151,7 +156,7 @@ export default function Settings() {
     }
   };
 
-  // 🔑 Change Password Handler
+  // Change Password Handler
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast.error("New passwords do not match!");
@@ -176,7 +181,7 @@ export default function Settings() {
     }
   };
 
-  // 🚪 Logout Handler
+  // Logout Handler
   const handleLogout = async () => {
     try {
       await logout();
@@ -187,6 +192,27 @@ export default function Settings() {
       setAccessToken(null);
       setUser(null);
       navigate("/login");
+    }
+  };
+
+  // Delete account handler
+  const handleDeleteAccount = async () => {
+    try {
+      await removeMyself(accessToken);
+      toast.success("Account deleted successfully");
+
+      setAccessToken(null);
+      setUser(null);
+      navigate("/login");
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        "Account deletion failed";
+
+      toast.error(errorMsg);
+      console.error("Account deletion failed:", errorMsg);
     }
   };
 
@@ -459,10 +485,21 @@ export default function Settings() {
                 undone.
               </p>
             </div>
-            <button className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors shrink-0">
+            <button
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors shrink-0"
+            >
               <LuTrash2 size={14} />
               Delete
             </button>
+
+            <ConfirmModal
+              isOpen={deleteConfirmOpen}
+              title="Delete your account?"
+              message="This will permanently delete your account and all your notes, todos, and journals. This action cannot be undone."
+              onClose={() => setDeleteConfirmOpen(false)}
+              onConfirm={handleDeleteAccount}
+            />
           </div>
         </div>
       </div>
