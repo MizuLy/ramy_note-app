@@ -300,12 +300,29 @@ const changeAvatar = async (req, res) => {
   try {
     const imageUrl = req.file.path;
 
-    const result = await prisma.users.update({
+    await prisma.users.update({
       where: { id: req.user.id },
       data: { image: imageUrl },
     });
 
     res.status(200).json({ status: "success", data: { image: imageUrl } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const removeMyself = async (req, res) => {
+  try {
+    if (req.user.role === "ADMIN")
+      return res
+        .status(400)
+        .json({ error: "You are an ADMIN, you mustn't delete your account!" });
+
+    await prisma.users.delete({
+      where: { id: req.user.id },
+    });
+
+    res.status(200).json({ status: "success", message: "Account deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -323,4 +340,5 @@ module.exports = {
   resetPassword,
   getUser,
   changeAvatar,
+  removeMyself,
 };

@@ -11,6 +11,7 @@ const {
   changeAvatar,
   forgotPassword,
   resetPassword,
+  removeMyself,
 } = require("../controllers/auth.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const { authLimiter } = require("../middlewares/rateLimiter");
@@ -74,5 +75,6 @@ router.post(
   authLimiter,
   resetPassword,
 );
+router.delete("/remove-myself", verifyToken, removeMyself);
 
 module.exports = router;
