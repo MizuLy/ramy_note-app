@@ -251,7 +251,7 @@ export default function Sidebar({ onCloseMobile }) {
       collapsed ? "md:justify-center md:px-0 px-3" : "px-3"
     } ${
       isActive
-        ? "bg-zinc-900 text-white font-semibold border-l-2 border-blue-500"
+        ? "bg-zinc-900 text-white font-semibold border-l-2 border-indigo-600"
         : "text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
     }`;
 
@@ -267,7 +267,7 @@ export default function Sidebar({ onCloseMobile }) {
   return (
     <>
       <nav
-        className={`bg-zinc-800 h-screen shrink-0 text-white flex flex-col transition-all duration-300 select-none ${
+        className={`bg-zinc-850 h-screen shrink-0 text-white flex flex-col transition-all duration-300 select-none ${
           collapsed ? "w-[280px] md:w-[64px]" : "w-[280px] md:w-[260px]"
         }`}
       >
@@ -292,9 +292,9 @@ export default function Sidebar({ onCloseMobile }) {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
-              <LuPanelLeftOpen size={18} />
+              <LuPanelLeftOpen size={20} />
             ) : (
-              <LuPanelLeftClose size={18} />
+              <LuPanelLeftClose size={20} />
             )}
           </button>
 
@@ -306,7 +306,7 @@ export default function Sidebar({ onCloseMobile }) {
               className="md:hidden text-zinc-400 hover:text-white shrink-0 p-1 rounded-md hover:bg-zinc-700 transition-colors"
               aria-label="Close sidebar"
             >
-              <LuX size={18} />
+              <LuX size={20} />
             </button>
           )}
         </div>
@@ -350,7 +350,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="My Notes"
             >
-              <PiNotebookLight size={18} className="shrink-0" />
+              <PiNotebookLight size={20} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">My Notes</span>
               )}
@@ -362,7 +362,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="My To-do"
             >
-              <LuListTodo size={18} className="shrink-0" />
+              <LuListTodo size={20} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">My To-do</span>
               )}
@@ -374,7 +374,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="My Journals"
             >
-              <LuPencilLine size={18} className="shrink-0" />
+              <LuPencilLine size={20} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">My Journals</span>
               )}
@@ -386,7 +386,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="Trash"
             >
-              <LuTrash2 size={18} className="shrink-0" />
+              <LuTrash2 size={20} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">Trash</span>
               )}
@@ -551,7 +551,7 @@ export default function Sidebar({ onCloseMobile }) {
                 className={getLinkClass}
                 title="Admin"
               >
-                <RiShieldUserLine size={18} className="shrink-0" />
+                <RiShieldUserLine size={20} className="shrink-0" />
                 {showLabels && (
                   <span className="text-sm flex-1 truncate">Admin</span>
                 )}
@@ -561,7 +561,7 @@ export default function Sidebar({ onCloseMobile }) {
         </div>
 
         {/* User Footer */}
-        <div className="p-3 border-t border-zinc-700 bg-zinc-800 shrink-0">
+        <div className="p-3 border-t border-zinc-700 bg-zinc-850 shrink-0">
           <Link
             to="/settings"
             onClick={handleNavClick}
@@ -605,7 +605,7 @@ export default function Sidebar({ onCloseMobile }) {
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 w-40 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg py-1 text-sm select-none"
+          className="fixed z-50 w-40 bg-zinc-900 border border-zinc-700 rounded-md shadow-lg py-1 text-sm select-none"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >

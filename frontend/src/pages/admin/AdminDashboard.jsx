@@ -119,7 +119,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex-1 h-screen overflow-y-auto bg-zinc-950 text-white p-4 sm:p-6 lg:p-8">
+    <div className="flex-1 h-screen overflow-y-auto bg-zinc-950 text-white p-4 sm:p-6 lg:p-8 pb-[50px] sm:pb-[70px] lg:pb-[70px] relative selection:bg-indigo-500/30 selection:text-indigo-200">
       {/* Header */}
       <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
