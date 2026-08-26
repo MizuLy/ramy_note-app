@@ -30,6 +30,14 @@ app.use(
 app.use(cookieParser());
 app.use(generalLimiter);
 
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use("/api/admin/dashboard", dashboardRoute);
 app.use("/api/auth", authRouter);
 app.use("/api/otp", otpRoute);
