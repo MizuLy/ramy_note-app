@@ -7,6 +7,7 @@ import {
   removeUser,
 } from "../../api/admin";
 import RoleDropdown from "../../components/RoleDropdown";
+import axios from "axios"; // Assuming axios is used for API calls
 
 function StatCardSkeleton() {
   return (
@@ -46,6 +47,18 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Server health state: "checking" | "online" | "offline"
+  const [serverHealth, setServerHealth] = useState("checking");
+
+  const checkHealth = async () => {
+    try {
+      await axios.get("/api/health");
+      setServerHealth("online");
+    } catch {
+      setServerHealth("offline");
+    }
+  };
+
   const loadData = async () => {
     try {
       const [statsData, usersData] = await Promise.all([
@@ -67,6 +80,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     document.title = "Admin | Ramy";
+    checkHealth();
   }, []);
 
   useEffect(() => {
@@ -107,13 +121,31 @@ export default function AdminDashboard() {
   return (
     <div className="flex-1 h-screen overflow-y-auto bg-zinc-950 text-white p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-semibold mb-1">
-          Admin Dashboard
-        </h1>
-        <p className="text-xs sm:text-sm text-zinc-400">
-          Manage users and monitor activity across the app.
-        </p>
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold mb-1">
+            Admin Dashboard
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400">
+            Manage users and monitor activity across the app.
+          </p>
+        </div>
+
+        {/* Real-time Server Health Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs w-fit">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              serverHealth === "online"
+                ? "bg-emerald-500 animate-pulse"
+                : serverHealth === "offline"
+                  ? "bg-red-500"
+                  : "bg-amber-500 animate-ping"
+            }`}
+          />
+          <span className="text-zinc-300 font-medium capitalize">
+            Server: {serverHealth}
+          </span>
+        </div>
       </div>
 
       {error && (
