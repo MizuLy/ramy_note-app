@@ -292,9 +292,9 @@ export default function Sidebar({ onCloseMobile }) {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
-              <LuPanelLeftOpen size={20} />
+              <LuPanelLeftOpen size={18} />
             ) : (
-              <LuPanelLeftClose size={20} />
+              <LuPanelLeftClose size={18} />
             )}
           </button>
 
@@ -306,7 +306,7 @@ export default function Sidebar({ onCloseMobile }) {
               className="md:hidden text-zinc-400 hover:text-white shrink-0 p-1 rounded-md hover:bg-zinc-700 transition-colors"
               aria-label="Close sidebar"
             >
-              <LuX size={20} />
+              <LuX size={18} />
             </button>
           )}
         </div>
@@ -350,7 +350,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="My Notes"
             >
-              <PiNotebookLight size={20} className="shrink-0" />
+              <PiNotebookLight size={18} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">My Notes</span>
               )}
@@ -362,7 +362,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="My To-do"
             >
-              <LuListTodo size={20} className="shrink-0" />
+              <LuListTodo size={18} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">My To-do</span>
               )}
@@ -374,7 +374,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="My Journals"
             >
-              <LuPencilLine size={20} className="shrink-0" />
+              <LuPencilLine size={18} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">My Journals</span>
               )}
@@ -386,7 +386,7 @@ export default function Sidebar({ onCloseMobile }) {
               className={getLinkClass}
               title="Trash"
             >
-              <LuTrash2 size={20} className="shrink-0" />
+              <LuTrash2 size={18} className="shrink-0" />
               {showLabels && (
                 <span className="text-sm flex-1 truncate">Trash</span>
               )}
@@ -551,7 +551,7 @@ export default function Sidebar({ onCloseMobile }) {
                 className={getLinkClass}
                 title="Admin"
               >
-                <RiShieldUserLine size={20} className="shrink-0" />
+                <RiShieldUserLine size={18} className="shrink-0" />
                 {showLabels && (
                   <span className="text-sm flex-1 truncate">Admin</span>
                 )}
