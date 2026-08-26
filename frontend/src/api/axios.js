@@ -1,5 +1,4 @@
 import axios from "axios";
-import { data } from "react-router-dom";
 
 const API_AUTH = `${import.meta.env.VITE_API_URL}/api/auth`;
 const API_TAG = `${import.meta.env.VITE_API_URL}/api/tags`;

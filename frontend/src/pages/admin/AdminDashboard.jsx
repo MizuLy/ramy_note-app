@@ -129,6 +129,8 @@ export default function AdminDashboard() {
             <StatCardSkeleton />
             <StatCardSkeleton />
             <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
           </>
         ) : (
           <>
@@ -146,6 +148,22 @@ export default function AdminDashboard() {
               </p>
               <p className="text-xl sm:text-2xl font-semibold">
                 {stats?.totalNotes ?? "-"}
+              </p>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-5">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wide text-zinc-500 mb-1">
+                Total Tasks
+              </p>
+              <p className="text-xl sm:text-2xl font-semibold">
+                {stats?.totalTasks ?? "-"}
+              </p>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-5">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wide text-zinc-500 mb-1">
+                Total Journals
+              </p>
+              <p className="text-xl sm:text-2xl font-semibold">
+                {stats?.totalJournals ?? "-"}
               </p>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-5 sm:col-span-2 lg:col-span-1">
