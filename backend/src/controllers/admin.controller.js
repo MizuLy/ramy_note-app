@@ -5,10 +5,13 @@ const getDashboardStats = async (req, res) => {
     const totalUsers = await prisma.users.count();
     const totalNotes = await prisma.notes.count();
     const totalTags = await prisma.tags.count();
+    const totalTasks = await prisma.todos.count();
+    const totalJournals = await prisma.journals.count();
 
-    res
-      .status(200)
-      .json({ status: "success", data: { totalUsers, totalNotes, totalTags } });
+    res.status(200).json({
+      status: "success",
+      data: { totalUsers, totalNotes, totalTags, totalTasks, totalJournals },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
