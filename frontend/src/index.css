@@ -19,6 +19,7 @@
 
     /* Backgrounds: Whites and soft grays */
     --color-zinc-950: 255 255 255; /* Main bg */
+    --color-zinc-850: 250 250 250; /* Sidebar */
     --color-zinc-900: 244 244 245; /* Cards / Sidebar */
     --color-zinc-800: 228 228 231; /* Inputs / Hover states / Light borders */
     --color-zinc-700: 212 212 216; /* Darker borders */
@@ -28,6 +29,17 @@
     --color-zinc-400: 39 39 42;    /* Headings / Titles */
     --color-zinc-200: 9 9 11;      /* Primary text */
     --color-zinc-100: 0 0 0;       /* Pure black */
+
+    /* Neutral aliases used by modal and error screens */
+    --color-neutral-950: 255 255 255;
+    --color-neutral-900: 244 244 245;
+    --color-neutral-800: 228 228 231;
+    --color-neutral-700: 212 212 216;
+    --color-neutral-600: 161 161 170;
+    --color-neutral-500: 113 113 122;
+    --color-neutral-400: 82 82 91;
+    --color-neutral-300: 63 63 70;
+    --color-neutral-200: 39 39 42;
   }
 
   /* BLACK / DARK Theme Overrides */
@@ -38,6 +50,7 @@
     --color-black: 0 0 0;       /* Normal black */
 
     --color-zinc-950: 9 9 11;
+    --color-zinc-850: 16 16 19;
     --color-zinc-900: 24 24 27;
     --color-zinc-800: 39 39 42;
     --color-zinc-700: 63 63 70;
@@ -45,6 +58,16 @@
     --color-zinc-400: 161 161 170;
     --color-zinc-200: 228 228 231;
     --color-zinc-100: 244 244 245;
+
+    --color-neutral-950: 9 9 11;
+    --color-neutral-900: 23 23 23;
+    --color-neutral-800: 38 38 38;
+    --color-neutral-700: 64 64 64;
+    --color-neutral-600: 82 82 82;
+    --color-neutral-500: 115 115 115;
+    --color-neutral-400: 163 163 163;
+    --color-neutral-300: 212 212 212;
+    --color-neutral-200: 229 229 229;
   }
 
   html, body, #root {
@@ -53,6 +76,7 @@
     margin: 0;
     background-color: rgb(var(--color-zinc-950));
     color: rgb(var(--color-zinc-200));
+    transition: background-color 180ms ease, color 180ms ease;
   }
 }
 
@@ -64,6 +88,11 @@
 
   .border-adaptive {
     border-color: rgb(var(--color-zinc-800));
+  }
+
+  /* Keep modal scrims dark in both themes; black is a visual overlay, not a surface token. */
+  [data-theme="light"] .bg-black\/60 {
+    background-color: rgb(9 9 11 / 0.6) !important;
   }
 }
 

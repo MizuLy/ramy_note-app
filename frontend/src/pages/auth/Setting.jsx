@@ -11,6 +11,7 @@ import {
   LuLoader,
 } from "react-icons/lu";
 import { MdOutlineColorLens } from "react-icons/md";
+import { RiLogoutBoxRLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthProvider";
@@ -450,8 +451,11 @@ export default function Settings() {
         {/* Account Card */}
         <div className="bg-zinc-900 border border-red-900/40 rounded-lg p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-md bg-red-950/40 flex items-center justify-center shrink-0">
-              <LuLogOut size={16} className="text-red-400" />
+            <div className="w-9 h-9 rounded-md bg-red-100 dark:bg-red-950/40 flex items-center justify-center shrink-0">
+              <RiLogoutBoxRLine
+                size={18}
+                className="text-red-600 dark:text-red-400"
+              />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-red-400">Account</h2>
@@ -472,7 +476,7 @@ export default function Settings() {
               onClick={handleLogout}
               className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-md bg-zinc-800 hover:bg-zinc-700 text-sm font-medium transition-colors shrink-0"
             >
-              <LuLogOut size={14} />
+              <RiLogoutBoxRLine size={16} aria-hidden="true" />
               Sign out
             </button>
           </div>

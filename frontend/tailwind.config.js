@@ -8,6 +8,7 @@ export default {
         white: "rgb(var(--color-white) / <alpha-value>)",
         black: "rgb(var(--color-black) / <alpha-value>)",
         zinc: {
+          850: "rgb(var(--color-zinc-850) / <alpha-value>)",
           950: "rgb(var(--color-zinc-950) / <alpha-value>)",
           900: "rgb(var(--color-zinc-900) / <alpha-value>)",
           800: "rgb(var(--color-zinc-800) / <alpha-value>)",
@@ -16,6 +17,17 @@ export default {
           400: "rgb(var(--color-zinc-400) / <alpha-value>)",
           200: "rgb(var(--color-zinc-200) / <alpha-value>)",
           100: "rgb(var(--color-zinc-100) / <alpha-value>)",
+        },
+        neutral: {
+          950: "rgb(var(--color-neutral-950) / <alpha-value>)",
+          900: "rgb(var(--color-neutral-900) / <alpha-value>)",
+          800: "rgb(var(--color-neutral-800) / <alpha-value>)",
+          700: "rgb(var(--color-neutral-700) / <alpha-value>)",
+          600: "rgb(var(--color-neutral-600) / <alpha-value>)",
+          500: "rgb(var(--color-neutral-500) / <alpha-value>)",
+          400: "rgb(var(--color-neutral-400) / <alpha-value>)",
+          300: "rgb(var(--color-neutral-300) / <alpha-value>)",
+          200: "rgb(var(--color-neutral-200) / <alpha-value>)",
         },
       },
       fontFamily: {
